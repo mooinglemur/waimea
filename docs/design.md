@@ -70,8 +70,12 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
 
 ## The web app
 
-1. The user picks an `.apworld` with the browser's file picker. If it holds several worlds, the user
-   chooses one. The version comes from the apworld's manifest.
+1. The user supplies an `.apworld` in one of two ways:
+   - with the browser's file picker; or
+   - by entering a URL, usually a GitHub release asset.
+
+   Either way the page ends up with the same bytes and continues identically. If the apworld holds several
+   worlds, the user chooses one. The version comes from the apworld's manifest.
 2. The page lists the tests to run, each section with a checkbox:
    - the unit tests;
    - each fuzz variant, with an editable run count;
@@ -119,6 +123,17 @@ The `unittest-report` and `fuzz-report` trees are what the CI's `aggregate_unitt
 - **Server.** A small Node 26 server with no npm dependencies, adapted from Kalapana's `server/http.mjs`.
   It handles compression, cache headers and content security policies. It keeps no data volume and never
   runs world code.
+- **Apworld relay.** GitHub release downloads can't be fetched from a page: neither `github.com`'s redirect
+  nor `release-assets.githubusercontent.com` sends `Access-Control-Allow-Origin` (checked 2026-09-15). So
+  the server relays them with `GET /relay?url=<url>`:
+  - https only, to GitHub release downloads (`github.com/<owner>/<repo>/releases/download/...`);
+  - redirects followed only to GitHub's asset hosts, re-checking each hop;
+  - no cookies or credentials sent;
+  - a size cap, with a zip content check, and a timeout;
+  - streamed to the page and never stored or cached.
+
+  Other hosts can be added to the allowlist later. A general open relay would let anyone reach addresses
+  inside the cluster (server-side request forgery).
 - **Image.** A multi-stage image:
   1. fetch and verify the pinned inputs (`inputs.json`, in Kalapana's format);
   2. build AP's core bundle, precompiled, with vendored wheels and runtime stubs;
@@ -165,6 +180,22 @@ sends the same messages.
 
 ### Unit tests
 
+`runtime/unit_tests.py` runs them the way CI does:
+- **Harness.** CI's own harness, the lobby's `ap_tests.py`, is pinned in `deploy/inputs.json` and
+  placed in AP's root. `unit_tests.py` imports it for its expectation-annotation logic and repeats its
+  `__main__` block, so test ids, outcomes and the `.aptest` and `.toml` files match.
+- **Loading.** `ap_tests.py` gets its apworlds from the lobby's `handler.py`, which needs OpenTelemetry
+  and requests. `unit_tests.py` stands in for it and loads apworlds the same way: `zipimport` plus AP's
+  `WorldSource`, with the manifest's `world_version` applied. As in CI's image, APQuest and the world under
+  test both load from zipped apworlds, and no other world is in `worlds/`.
+- **Events.** It emits one JSON event per test (`plan`, `start`, `result`, `stop`, `done`) for the page:
+  - a subtest's result carries its parent's id;
+  - a test with a failed subtest gets no result of its own, so the page closes each test on `stop`;
+  - CI's harness stops the whole run at the first unexpected error, and `done` says so;
+  - subtests make the stream large (5,514 results for Stardew Valley's 205 tests), so the page batches
+    updates rather than rendering each event.
+
+What `ap_tests.py` itself does:
 - **Harness.** `ap_tests.py` runs everything with `unittest` in one process:
   `loadTestsFromTestCase(WorldTest)` plus `discover("test/general", top_level_dir=".")`.
 - **Loaded worlds.** It loads the world under test and APQuest, then unloads every other world except
@@ -201,14 +232,21 @@ which would need stubs, and it needs AP's `data/options.yaml` template and `jinj
 - **Worker isolation.** World code runs only in Web Workers, whose policy allows no network. That replaces
   `unshare -rn` and the network audit. A worker can't reach the page's DOM or localStorage. Kalapana's
   `workerPolicy` shows the pattern.
-- **Server.** The server never receives or imports an apworld.
+- **Server.** The server never imports an apworld, and never receives one from a user. For URL entry it
+  relays a public download from an allowlisted host, without storing it.
 - **Results.** Results can be forged, which is why Waimea is self-service only.
 
 ## Pyodide constraints
 
 From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
 
-- **Python version.** Stay on Pyodide 0.29.x (Python 3.13). AP's `ModuleUpdate` rejects 3.14.
+- **Python version.** Stay on Pyodide 0.29.x (Python 3.13). AP's `ModuleUpdate` rejects 3.14, and later
+  Pyodide releases (`314.x`) embed 3.14.
+- **Python 3.13.2 bugs.** Every Pyodide 0.29 release embeds CPython 3.13.2, while CI runs 3.12. A bug
+  fixed in a later 3.13 release can make a test fail only in Waimea. One is known and patched in
+  `waimea_boot.py`: gh-127750, where `functools.singledispatchmethod`'s cache keeps instances alive.
+  Stardew Valley failed `test_memory.test_leak` from it; native CPython 3.13.2 reproduced the failure;
+  3.12 and 3.13.3 to 3.13.14 passed; and disabling the cache fixed it.
 - **No threads, subprocesses or signals.** JSPI, which would allow blocking on async work, is Chrome-only.
 - **Native code.** Worlds needing native packages Pyodide lacks fail to load. Worlds that call native
   executables during generation, such as ALttP's Enemizer, won't generate.
@@ -229,7 +267,10 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
 ## Milestones
 
 1. **Feasibility spike.** Done: `docs/spike-01-feasibility.md`.
-2. **Unit tests in Pyodide.** The equivalent of `ap_tests.py` for one apworld, with other worlds unloaded.
+2. **Unit tests in Pyodide.** The equivalent of `ap_tests.py` for one apworld, with other worlds
+   unloaded. The runner (`runtime/unit_tests.py`) passes all 205 tests for TUNIC and Stardew Valley under
+   Node, matching native (`spikes/02-unit-tests/`). Still to do: running it in a browser worker, and the
+   core bundle build.
 3. **Fuzz driver.** The orchestrator and workers, timeouts and restarts, and a CI-compatible
    `report.json`.
 4. **Hook variants.** The in-process hooks, then the determinism design.
@@ -243,8 +284,7 @@ that needs native executables.
 
 1. **Coverage.** Kalapana showed 449 of 507 index worlds import under Pyodide, but that doesn't show how
    many generate.
-2. **`test/general` under Pyodide**, with only the world under test loaded.
-3. **Default run counts.** CI's 5000 runs take about 80 minutes for a Stardew-sized world in Chrome at four
+2. **Default run counts.** CI's 5000 runs take about 80 minutes for a Stardew-sized world in Chrome at four
    workers.
-4. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
+3. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
    orchestrator.

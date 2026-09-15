@@ -16,5 +16,24 @@ Planning. The feasibility spike is done, and nothing else is built yet.
 - `docs/spike-01-feasibility.md`: speed, memory, stack depth and hash randomization, measured under Pyodide
   in Node, Chrome and Firefox.
 - `spikes/01-feasibility/`: the spike's scripts and raw results.
-- `inputs.json`: pinned inputs in Kalapana's format, copied from Kalapana as a starting point. It will be
-  re-pinned to the CI's Archipelago fork, fuzzer and Universal Tracker versions.
+- `deploy/inputs.json`: pinned inputs, matching the index CI's image:
+  - the `ionium-ap/Archipelago` fork and `ionium-ap/Archipelago-fuzzer` commits, and the fuzzer hooks CI
+    replaces;
+  - the lobby's `ap_tests.py`, the harness CI runs for unit tests;
+  - Universal Tracker 0.2.26 and the empty apworld;
+  - Pyodide and pure-Python wheels.
+
+  Each is verified by sha256.
+- `runtime/`: Python that runs inside Pyodide. `waimea_boot.py` prepares the interpreter,
+  `unit_tests.py` runs an apworld's unit tests as CI does, and the rest are stand-ins for modules Pyodide
+  lacks (some adapted from Kalapana).
+
+## Development
+
+```sh
+node deploy/fetch-inputs.mjs vendor   # pinned inputs into vendor/; needs tar and bzip2
+```
+
+## License
+
+MIT; see `LICENSE`.

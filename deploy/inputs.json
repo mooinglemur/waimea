@@ -1,0 +1,103 @@
+{
+  "archipelago": {
+    "version": "0.6.7",
+    "repository": "ionium-ap/Archipelago",
+    "commit": "f04b3a3457efbca6fde29beaf70c7f7f0016cdc8",
+    "url": "https://codeload.github.com/ionium-ap/Archipelago/tar.gz/f04b3a3457efbca6fde29beaf70c7f7f0016cdc8",
+    "sha256": "80206e5e08be92bd8cb81648a6d1e88c372cbc8ae4040847d16131660347a859"
+  },
+  "fuzzer": {
+    "repository": "ionium-ap/Archipelago-fuzzer",
+    "commit": "17227d793cc1088ae9be5fe97421e73bb683efdf",
+    "url": "https://codeload.github.com/ionium-ap/Archipelago-fuzzer/tar.gz/17227d793cc1088ae9be5fe97421e73bb683efdf",
+    "sha256": "b04b68964cff44a002c6404384a28caa87e2527200e43e334689e1c2b3c58a23",
+    "hookOverrides": [
+      {
+        "url": "https://raw.githubusercontent.com/Mysteryem/Archipelago-fuzzer/8148d97ff4fe9a09b672d9c4a4fb01f06164fef1/hooks/detect_rule_variable_capture_issues.py",
+        "sha256": "c187ca024f40b057da7c0c44a529b51f7cee8159dc82c744e381ce91b49760c2"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Mysteryem/Archipelago-fuzzer/7bc2dcd4367d1450cda11f0c1bc1f2edb385e218/hooks/check_placement_item_location_references.py",
+        "sha256": "bff42dd45bdf158bb4a5437699aae120716990abe98d2b24c673b02cecd1fc78"
+      }
+    ]
+  },
+  "lobby": {
+    "repository": "ionium-ap/Archipelago-lobby",
+    "commit": "f74266a8b5393848f803cfdc2a86cc2ce8bd76a2",
+    "files": [
+      {
+        "path": "ap-worker/ap_tests.py",
+        "url": "https://raw.githubusercontent.com/ionium-ap/Archipelago-lobby/f74266a8b5393848f803cfdc2a86cc2ce8bd76a2/ap-worker/ap_tests.py",
+        "sha256": "b4cd512722604e12b61fef43351439bbce603c355a3222d102650ee312ae3b30"
+      }
+    ]
+  },
+  "pyodide": {
+    "version": "0.29.4",
+    "url": "https://github.com/pyodide/pyodide/releases/download/0.29.4/pyodide-core-0.29.4.tar.bz2",
+    "sha256": "5304510cb0e4b5cfce57b410451c3fd2fba96177e3d0b8a31da9ad7a0620bff6",
+    "packageBaseUrl": "https://cdn.jsdelivr.net/pyodide/v0.29.4/full/",
+    "packages": ["pyyaml", "orjson", "requests", "ssl", "setuptools", "jinja2", "attrs", "docutils"]
+  },
+  "apworlds": [
+    {
+      "name": "tracker",
+      "version": "0.2.26",
+      "url": "https://github.com/FarisTheAncient/Archipelago/releases/download/Tracker_v0.2.26/tracker.apworld",
+      "sha256": "ce5674e899d0303f156d43f2c8ebe026498031bf7cd3382524c1d02ee359d463"
+    },
+    {
+      "name": "empty",
+      "version": "0.0.3",
+      "url": "https://github.com/ionium-ap/empty-apworld/releases/download/v0.0.3/empty.apworld",
+      "sha256": "eac0f66b67ae683b35e364185a449d056dc4e67f90df6c5cc14b0033dba5287e"
+    }
+  ],
+  "wheels": [
+    {
+      "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+      "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/56/27/96a5cd2626d11c8280656c6c71d8ab50fe006490ef9971ccd154e0c42cd2/websockets-13.1-py3-none-any.whl",
+      "sha256": "a9a396a6ad26130cdae92ae10c36af09d9bfe6cafe69670fd3b6da9b07b4044f"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/c9/75/aad85817266ac5285c93391711d231ca63e9ae7d42cd3ca37549e24ebe52/schema-0.7.8-py2.py3-none-any.whl",
+      "sha256": "00bd977fadc7d9521bf289850cd8a8aa5f4948f575476b8daaa5c1b57af2dce1"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/63/d7/97f7e3a6abb67d8080dd406fd4df842c2be0efaf712d1c899c32a075027c/platformdirs-4.9.4-py3-none-any.whl",
+      "sha256": "68a9a4619a666ea6439f2ff250c12a853cd1cbd5158d258bd824a7df6be2f868"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl",
+      "sha256": "f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/ef/3c/2c197d226f9ea224a9ab8d197933f9da0ae0aac5b6e0f884e2b8d9c8e9f7/pathspec-1.0.4-py3-none-any.whl",
+      "sha256": "fb6ae2fd4e7c921a165808a552060e722767cfa526f99ca5156ed2ce45a5c723"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/37/d3/d2748b1394caac3dede21512e1f68aa5a41209db41b49e54add5b2e521f3/maseya_z3pr-1.0.0rc1-py3-none-any.whl",
+      "sha256": "21a5611950be32d99dd5d855c0b28f4d97072f9e4b31bcdccdcc61b645a15bf0"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/b5/11/87d6d29fb5d237229d67973a6c9e06e048f01cf4994dee194ab0ea841814/tomlkit-0.14.0-py3-none-any.whl",
+      "sha256": "592064ed85b40fa213469f81ac584f67a4f2992509a7c3ea2d632208623a3680"
+    },
+    {
+      "url": "https://files.pythonhosted.org/packages/a6/24/4d91e05817e92e3a61c8a21e08fd0f390f5301f1c448b137c57c4bc6e543/semver-3.0.4-py3-none-any.whl",
+      "sha256": "9c824d87ba7f7ab4a1890799cec8596f15c1241cb473404ea1cb0c55e4b04746"
+    }
+  ],
+  "sources": [
+    {
+      "name": "zilliandomizer",
+      "url": "https://codeload.github.com/beauxq/zilliandomizer/tar.gz/96d9a20f8278cee64bb4db859fbd874e0f332d36",
+      "sha256": "ebe356a8f1447fb45566ba748a04587b52fd91ab67625d17a666486c5c2bc347",
+      "package": "src/zilliandomizer"
+    }
+  ]
+}

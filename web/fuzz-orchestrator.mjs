@@ -11,11 +11,18 @@
 // - Fatal errors: a worker whose interpreter fails (often a JavaScript stack overflow) counts a failure
 //   under FATAL_KEY and is replaced. fuzz.py counts a crashed pool worker as a failure too.
 // - Seeds: run i's YAMLs come from random.seed(`${seed}-${i}`), so a run can be reproduced.
+// - Boot failures: a browser can refuse to start a worker, usually under memory pressure after many restarts.
+//   A slot retries with a growing delay; if it keeps failing, that slot retires and the others carry on. The
+//   variant ends when the last slot is gone, keeping the runs that finished, with `error` saying why.
 // - Paired workers (check-determinism): natively the hook starts a child process per pool worker and blocks
 //   on it. Here each worker gets a partner running in the "regenerator" role; a run pauses with a regenerate
 //   request, which is passed to the partner, and resumes with its response. The timeout covers both, as
 //   fuzz.py's timer covers after_generate. A partner's fatal error becomes the child's error reply, which the
 //   hook reports as a failure.
+
+// How often a slot retries a worker that failed to start, and how long it waits between tries. The delays grow
+// because the usual cause is memory pressure, which needs time to ease after the failed worker is discarded.
+export const BOOT_RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000];
 
 export const TIMEOUT_KEY = "<class 'TimeoutError'>";
 export const FATAL_KEY =
@@ -33,27 +40,30 @@ export const FATAL_KEY =
  * @param {number} options.heapLimitBytes  0 for none
  * @param {string} options.seed
  * @param {(i: number) => number} [options.generationSeed]  pins run i's generation seed (calibration)
+ * @param {number[]} [options.bootRetryDelays]  waits between retries of a worker that wouldn't start
  * @param {(progress: object) => void} [options.onProgress]
  * @param {AbortSignal} [options.signal]  aborting ends the variant with the runs completed so far
  * @returns {Promise<{report: object, files: Record<string, string>, counters: object, game: string | null,
  *   durations: {i: number, outcome: string, seconds: number}[]}>}  durations: generation time of each run
  *   that finished in its worker (not timeouts or fatal errors)
  */
-export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, timeoutSeconds, heapLimitBytes, seed, generationSeed, onProgress = () => {}, signal }) {
+export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, timeoutSeconds, heapLimitBytes, seed, generationSeed, bootRetryDelays = BOOT_RETRY_DELAYS, onProgress = () => {}, signal }) {
   return new Promise((resolve, reject) => {
     const stats = { success: 0, failure: 0, timeout: 0, ignored: 0 };
     const errors = {};
     const files = {};
-    const counters = { restarts: 0, heapRestarts: 0, timeouts: 0, fatal: 0, regeneratorFatal: 0, bootSeconds: [] };
+    const counters = { restarts: 0, heapRestarts: 0, timeouts: 0, fatal: 0, regeneratorFatal: 0, bootFailures: 0, retiredSlots: 0, bootSeconds: [] };
     const durations = [];
     const slots = [];
     let next = 0;
     let completed = 0;
     let finished = false;
     let game = null;
+    let endedEarly = null;
 
     const stopSlot = (slot) => {
       clearTimeout(slot.timer);
+      clearTimeout(slot.bootTimer);
       slot.worker?.terminate();
       slot.worker = null;
       slot.partner?.worker?.terminate();
@@ -64,13 +74,24 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
       if (finished) return;
       finished = true;
       for (const slot of slots) stopSlot(slot);
-      if (error) {
+      // Only a variant that produced nothing rejects: with runs completed, the caller gets them and the reason
+      // it stopped, so hours of fuzzing aren't lost to one worker the browser wouldn't start.
+      if (error && !completed) {
         reject(error);
         return;
       }
       const report = { stats: { total: completed, ...stats }, errors };
       files["fuzz_output/report.json"] = JSON.stringify(report);
-      resolve({ report, files, counters, game, durations, aborted: Boolean(signal?.aborted) });
+      resolve({ report, files, counters, game, durations, aborted: Boolean(signal?.aborted), error: error?.message ?? null });
+    };
+
+    // A slot that can't get a worker retires; the variant ends when the last one does.
+    const retire = (slot, error) => {
+      stopSlot(slot);
+      slot.state = "done";
+      counters.retiredSlots++;
+      endedEarly ??= error;
+      if (slots.every((s) => s.state === "done")) finish(next < runs || completed < runs ? endedEarly : null);
     };
 
     const addError = (key, i) => {
@@ -95,6 +116,27 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
       slot.worker = worker;
       slot.state = "booting";
       worker.post({ type: "init", ...init });
+    }
+
+    // The browser wouldn't start, or immediately lost, this worker. Wait and try again; give up on this slot
+    // after BOOT_RETRY_DELAYS is exhausted.
+    function retryBoot(slot, what, text) {
+      counters.bootFailures++;
+      slot.worker?.terminate();
+      slot.worker = null;
+      slot.partner?.worker?.terminate();
+      if (slot.partner) slot.partner.worker = null;
+      const delay = bootRetryDelays[slot.bootFailures++];
+      if (delay === undefined) {
+        retire(slot, new Error(`${what} failed to start ${slot.bootFailures} times in a row; the browser may be out of memory:\n${text}`));
+        return;
+      }
+      slot.state = "booting";
+      slot.bootTimer = setTimeout(() => {
+        if (finished || slot.state === "done") return;
+        start(slot);
+        if (slot.partner) startPartner(slot);
+      }, delay);
     }
 
     function startPartner(slot) {
@@ -148,10 +190,22 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
     }
 
     function onCrash(slot, text) {
-      if (finished) return;
+      if (finished || slot.state === "done") return;
       clearTimeout(slot.timer);
-      if (slot.state === "booting" || slot.state === "reclassifying") {
-        finish(new Error(`A fuzz worker failed while starting:\n${text}`));
+      if (slot.state === "booting") {
+        retryBoot(slot, "A fuzz worker", text);
+        return;
+      }
+      if (slot.state === "reclassifying") {
+        // The worker that would have asked the hooks about the timeout died. Count it as fuzz.py's plain
+        // timeout and carry on, rather than losing the variant.
+        const { i, yamls } = slot.pendingTimeout;
+        slot.pendingTimeout = null;
+        counters.reclassifyFailures = (counters.reclassifyFailures ?? 0) + 1;
+        addDump("timeout", i, { ...yamls, [`${i}.log`]: `[...] Generation killed here after ${timeoutSeconds}s` });
+        addError(TIMEOUT_KEY, i);
+        record("timeout");
+        replace(slot);
         return;
       }
       if (slot.state === "preparing" || slot.state === "generating" || slot.state === "regenerating") {
@@ -168,6 +222,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
       switch (message.type) {
         case "ready":
           game = message.game;
+          slot.bootFailures = 0;
           counters.bootSeconds.push(+message.seconds.toFixed(2));
           if (slot.pendingTimeout) {
             slot.state = "reclassifying";
@@ -243,10 +298,10 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
     }
 
     function onPartnerCrash(slot, text) {
-      if (finished) return;
+      if (finished || slot.state === "done") return;
       const partner = slot.partner;
       if (partner.state === "booting") {
-        finish(new Error(`A regenerating worker failed while starting:\n${text}`));
+        retryBoot(slot, "A regenerating worker", text);
         return;
       }
       if (partner.state === "busy") {
@@ -277,7 +332,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
           onPartnerCrash(slot, message.text);
           break;
         case "setupError":
-          finish(new Error(`Regenerating worker setup failed:\n${message.text}`));
+          retire(slot, new Error(`Regenerating worker setup failed:\n${message.text}`));
           break;
       }
     }
@@ -297,7 +352,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, t
       return;
     }
     for (let j = 0; j < Math.min(jobs, runs); j++) {
-      const slot = { worker: null, state: "idle", i: null, yamls: null, timer: null, pendingTimeout: null, partner: paired ? { worker: null, state: "idle" } : null };
+      const slot = { worker: null, state: "idle", i: null, yamls: null, timer: null, bootTimer: null, bootFailures: 0, pendingTimeout: null, partner: paired ? { worker: null, state: "idle" } : null };
       slots.push(slot);
       start(slot);
       if (slot.partner) startPartner(slot);

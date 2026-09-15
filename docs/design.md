@@ -195,6 +195,11 @@ doesn't run `fuzz.py`'s `__main__`.
 - **Fatal errors.** A fatal Pyodide error, usually a JS stack overflow, gets its own outcome: its YAMLs are
   recorded and the worker is restarted, as for a timeout.
 - **Restart cost.** A fresh worker is ready in about 1.5 seconds.
+- **Workers that won't start.** After hundreds of restarts a browser can refuse to start a worker, reporting
+  an error event with no message; memory pressure is the likely cause. A slot retries with growing delays, and
+  retires if they all fail, leaving the other workers to carry on. Only when the last slot retires does the
+  variant end, keeping the runs that finished and saying why it stopped. A run of `default` on the deployed
+  site died this way at about 400 of 500 generations, losing everything it had done.
 
 The page and the Pyodide runner are built separately. The page is developed against a fake worker that
 sends the same messages.

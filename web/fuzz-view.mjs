@@ -59,7 +59,7 @@ export class FuzzVariantView {
       this.skip(entry.skipped);
       return;
     }
-    if (entry.error) {
+    if (entry.error && !entry.result) {
       setDot(this.marker, "fail");
       this.counts.textContent = "couldn't run";
       this.body.append(h("pre", { class: "log" }, entry.error));
@@ -73,14 +73,20 @@ export class FuzzVariantView {
     // wrong, and a hook may have recorded it as another outcome. Count every generation that hit the limit,
     // not just those still classified as timeouts.
     const timedOut = Math.max(counters.timeouts ?? 0, stats.timeout);
-    const state = stats.failure ? "fail" : timedOut ? "warn" : "pass";
+    const endedEarly = Boolean(entry.error);
+    const state = stats.failure ? "fail" : timedOut || endedEarly ? "warn" : "pass";
     setDot(this.marker, state);
     const headline = stats.failure
       ? `${stats.failure} of ${stats.total} failed`
       : timedOut
         ? `${stats.total - timedOut} of ${stats.total} passed · ${timedOut} timed out`
         : `${stats.total} passed`;
-    this.counts.textContent = `${headline}${aborted ? " (stopped)" : ""}${elapsed}`;
+    const incomplete = endedEarly ? ` (ended after ${stats.total} of ${entry.runs} runs)` : "";
+    this.counts.textContent = `${headline}${aborted ? " (stopped)" : ""}${incomplete}${elapsed}`;
+    if (endedEarly) {
+      this.body.append(h("p", { class: "hint" }, "The variant ended before finishing its runs:"), h("pre", { class: "log" }, entry.error));
+      this.element.open = true;
+    }
 
     this.body.append(h("p", {}, statsLine(stats)));
     const notes = [];
@@ -92,6 +98,8 @@ export class FuzzVariantView {
     if (counters.fatal) notes.push(`${counters.fatal} runs crashed the browser's Python interpreter (often a JavaScript stack overflow); these may pass natively.`);
     if (counters.regeneratorFatal) notes.push(`${counters.regeneratorFatal} regenerations crashed the second interpreter; the hook reports these as failed subprocess generations.`);
     if (counters.heapRestarts) notes.push(`${counters.heapRestarts} workers were restarted to free memory.`);
+    if (counters.bootFailures) notes.push(`${counters.bootFailures} workers wouldn't start and were retried${counters.retiredSlots ? `; ${counters.retiredSlots} gave up, leaving fewer workers` : ""}.`);
+    if (counters.reclassifyFailures) notes.push(`${counters.reclassifyFailures} timeouts were counted as timeouts because the worker that would ask the hook about them died.`);
     for (const note of notes) this.body.append(h("p", { class: "hint" }, note));
 
     const worldErrors = Object.values(report.errors)[0] ?? {};

@@ -33,7 +33,11 @@ const spawner = (script) => ({ onMessage, onError }) => {
   worker.onmessage = (event) => onMessage(event.data);
   worker.onerror = (event) => {
     event.preventDefault();
-    onError(`worker error: ${event.message}`);
+    // A worker the browser refused to start, or discarded, reports an event with no message at all.
+    const where = event.filename ? ` (${event.filename}:${event.lineno})` : "";
+    onError(event.message
+      ? `worker error: ${event.message}${where}`
+      : `the browser stopped the worker without an error${where}; it may be short of memory`);
   };
   return { post: (message) => worker.postMessage(message), terminate: () => worker.terminate() };
 };

@@ -205,7 +205,8 @@ export async function runSession({ manifest, core, apworldBytes, world, plan, sp
         signal,
         onProgress: (progress) => onEvent({ type: "fuzzProgress", variant: variant.name, progress }),
       });
-      entry = { variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired), result };
+      // A variant that ended early still returns the runs it finished, with error saying why.
+      entry = { variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired), result, error: result.error ?? undefined };
     } catch (err) {
       entry = { variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired), error: err.message };
     }

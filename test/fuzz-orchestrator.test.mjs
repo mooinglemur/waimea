@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { FATAL_KEY, TIMEOUT_KEY, runVariant } from "../web/fuzz-orchestrator.mjs";
+import { BOOT_RETRY_DELAYS, FATAL_KEY, TIMEOUT_KEY, runVariant } from "../web/fuzz-orchestrator.mjs";
 
 // A fake worker speaking fuzz-worker.mjs's protocol. behavior(i) returns a result message's fields,
 // "hang" (never answers after "started"), or "fatal".
@@ -150,6 +150,109 @@ test("a regenerator's fatal error answers its worker as the hook's subprocess er
   assert.equal(result.counters.regeneratorFatal, 1);
   assert.equal(result.counters.fatal, 0);
   assert.deepEqual(log, { spawned: 3, regenerators: 2 });
+});
+
+// A fake whose workers can fail to start: failSpawns holds the 0-based spawn numbers the browser refuses, and
+// fatalRun the run that kills its worker. reclassifyCrash kills the worker asked to reclassify a timeout.
+function fakeBootSpawn({ failSpawns = new Set(), fatalRun = null, reclassifyCrash = false } = {}) {
+  const log = { spawned: 0 };
+  const spawn = ({ onMessage, onError }) => {
+    const index = log.spawned++;
+    let alive = true;
+    const send = (message) => setTimeout(() => alive && onMessage(message), 1);
+    const fail = (text) => setTimeout(() => alive && onError(text), 1);
+    return {
+      post(message) {
+        if (message.type === "init") {
+          if (failSpawns.has(index)) return fail("the browser stopped the worker without an error; it may be short of memory");
+          return send({ type: "ready", game: "Fake", seconds: 0.01 });
+        }
+        if (message.type === "timeoutOutcome") {
+          if (reclassifyCrash) return fail("worker died while reclassifying");
+          return send({ type: "timeoutOutcome", outcome: "timeout" });
+        }
+        if (message.type === "run") {
+          send({ type: "started", i: message.i, yamls: { [`${message.i}-0.yaml`]: "game: Fake\n" } });
+          if (message.i === fatalRun) return send({ type: "fatal", text: "boom" });
+          send({ type: "result", outcome: "success", key: null, dump: null, seconds: 0.01, heapBytes: 10 });
+        }
+      },
+      terminate() {
+        alive = false;
+      },
+    };
+  };
+  return { spawn, log };
+}
+
+const fastRetries = { bootRetryDelays: [1, 1] };
+
+test("a worker the browser won't start is retried, and the variant carries on", async () => {
+  const { spawn, log } = fakeBootSpawn({ failSpawns: new Set([0]) });
+  const result = await runVariant({ ...base, ...fastRetries, spawn, runs: 2, jobs: 1 });
+  assert.deepEqual(result.report.stats, { total: 2, success: 2, failure: 0, timeout: 0, ignored: 0 });
+  assert.equal(result.counters.bootFailures, 1);
+  assert.equal(result.counters.retiredSlots, 0);
+  assert.equal(result.error, null);
+  assert.equal(log.spawned, 2);
+});
+
+test("a worker that never starts retires its slot, and the other workers finish the variant", async () => {
+  // Slot 2's first worker is spawn 1, and its retries are spawns 2 and 3.
+  const { spawn } = fakeBootSpawn({ failSpawns: new Set([1, 2, 3]) });
+  const result = await runVariant({ ...base, ...fastRetries, spawn, runs: 4, jobs: 2 });
+  assert.deepEqual(result.report.stats, { total: 4, success: 4, failure: 0, timeout: 0, ignored: 0 });
+  assert.equal(result.counters.bootFailures, 3);
+  assert.equal(result.counters.retiredSlots, 1);
+  assert.equal(result.error, null, "every run finished, so the variant isn't short");
+});
+
+test("when the last worker gives up, the finished runs are kept with the reason", async () => {
+  const { spawn } = fakeBootSpawn({ failSpawns: new Set([1, 2, 3]), fatalRun: 2 });
+  const result = await runVariant({ ...base, ...fastRetries, spawn, runs: 5, jobs: 1 });
+  assert.deepEqual(result.report.stats, { total: 3, success: 2, failure: 1, timeout: 0, ignored: 0 });
+  assert.match(result.error, /failed to start 3 times in a row; the browser may be out of memory/);
+  assert.equal(result.counters.retiredSlots, 1);
+  assert.equal(result.files["fuzz_output/report.json"], JSON.stringify(result.report));
+});
+
+test("a variant that produces nothing at all still rejects", async () => {
+  const { spawn } = fakeBootSpawn({ failSpawns: new Set([0, 1, 2]) });
+  await assert.rejects(runVariant({ ...base, ...fastRetries, spawn, runs: 3, jobs: 1 }), /failed to start/);
+});
+
+test("a worker that dies while reclassifying leaves the run counted as a timeout", async () => {
+  const { spawn } = fakeBootSpawn({ reclassifyCrash: true });
+  const result = await runVariant({
+    ...base,
+    ...fastRetries,
+    spawn: ({ onMessage, onError }) => {
+      const worker = spawn({ onMessage, onError });
+      return {
+        post(message) {
+          // Run 0 hangs, so it times out; everything else behaves.
+          if (message.type === "run" && message.i === 0) {
+            onMessage({ type: "started", i: 0, yamls: { "0-0.yaml": "game: Fake\n" } });
+            return;
+          }
+          worker.post(message);
+        },
+        terminate: worker.terminate,
+      };
+    },
+    runs: 2,
+    jobs: 1,
+    timeoutSeconds: 0.05,
+  });
+  assert.deepEqual(result.report.stats, { total: 2, success: 1, failure: 0, timeout: 1, ignored: 0 });
+  assert.deepEqual(result.report.errors, { fake: { [TIMEOUT_KEY]: [0] } });
+  assert.equal(result.counters.reclassifyFailures, 1);
+  assert.equal(result.files["fuzz_output/timeout/fake/0/0.log"], "[...] Generation killed here after 0.05s");
+});
+
+test("the shipped boot retry delays grow, so memory pressure has time to ease", () => {
+  assert.equal(BOOT_RETRY_DELAYS.length >= 3, true);
+  for (let i = 1; i < BOOT_RETRY_DELAYS.length; i++) assert.equal(BOOT_RETRY_DELAYS[i] > BOOT_RETRY_DELAYS[i - 1], true);
 });
 
 test("aborting ends the variant with the runs completed so far", async () => {

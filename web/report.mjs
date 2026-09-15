@@ -79,6 +79,9 @@ function renderWaimeaNotes(entry, record) {
   }
   if (counters.fatal) notes.push(`${counters.fatal} fatal interpreter errors, under "${FATAL_KEY}"`);
   if (counters.regeneratorFatal) notes.push(`${counters.regeneratorFatal} fatal errors in regenerating workers, reported as the hook's subprocess errors`);
+  if (counters.bootFailures) notes.push(`${counters.bootFailures} workers wouldn't start${counters.retiredSlots ? `, and ${counters.retiredSlots} of them gave up` : ""}`);
+  if (counters.reclassifyFailures) notes.push(`${counters.reclassifyFailures} timeouts couldn't be reclassified, because the worker asking died`);
+  if (entry.error) notes.push(`ended after ${entry.result.report.stats.total} of ${entry.runs} runs: ${lastLine(entry.error).slice(0, 200)}`);
   if (counters.heapRestarts) notes.push(`${counters.heapRestarts} workers restarted for memory`);
   if (entry.result.aborted) notes.push("stopped early");
   return `_${notes.join("; ")}._\n`;
@@ -89,7 +92,7 @@ export function renderVariant(entry, record) {
   const definition = VARIANTS.find((v) => v.name === entry.variant);
   const slug = entry.variant;
   if (entry.skipped) return `### ⏭️ ${slug}\n\n_Not run: ${entry.skipped}._\n`;
-  if (entry.error) return `### ⚠️ ${slug}\n\n_The variant couldn't run: \`${lastLine(entry.error).slice(0, 300)}\`_\n`;
+  if (entry.error && !entry.result) return `### ⚠️ ${slug}\n\n_The variant couldn't run: \`${lastLine(entry.error).slice(0, 300)}\`_\n`;
 
   const { stats, errors } = entry.result.report;
   const total = stats.total ?? stats.success + stats.failure + stats.timeout + stats.ignored;

@@ -1,0 +1,22 @@
+== apquest (full)
+  native        n=100 mean 0.006s median 0.006s p95 0.009s total 0.6s - {'success': 100} heap 30->30 MiB (4.9 KiB/gen)
+  node-pyodide  n=100 mean 0.007s median 0.006s p95 0.008s total 0.7s 1.09x {'success': 100} heap 29->29 MiB (0.0 KiB/gen) boot 1.36+0.13+0.08s
+  chrome        (missing)
+  firefox       (missing)
+  identical YAMLs native vs node-pyodide: 100/100
+== tunic (full)
+  native        n=100 mean 0.495s median 0.572s p95 0.836s total 49.5s - {'success': 100} heap 58->73 MiB (171.2 KiB/gen)
+  node-pyodide  n=100 mean 0.638s median 0.747s p95 1.067s total 63.8s 1.29x {'success': 100} heap 50->50 MiB (0.0 KiB/gen) boot 1.33+0.14+0.05s
+  chrome        n=100 mean 0.667s median 0.762s p95 1.118s total 66.7s 1.35x {'success': 100} heap 50->50 MiB (0.0 KiB/gen) boot 1.31+0.15+0.05s
+  firefox       n=100 mean 0.956s median 1.164s p95 1.706s total 95.6s 1.93x {'success': 100} heap 50->50 MiB (0.0 KiB/gen) boot 1.25+0.13+0.05s
+  identical YAMLs native vs node-pyodide: 100/100
+== stardew_valley (full)
+  native        n=100 mean 4.153s median 2.460s p95 5.424s total 415.3s - {'success': 100} heap 87->88 MiB (10.5 KiB/gen)
+  node-pyodide  n=100 mean 3.990s median 3.477s p95 9.222s total 399.0s 0.96x {'success': 100} heap 72->371 MiB (3406.2 KiB/gen) boot 1.39+0.13+0.09s
+  chrome        n=100 mean 5.367s median 3.764s p95 8.918s total 536.7s 1.29x {'success': 100} heap 72->371 MiB (3406.2 KiB/gen) boot 1.21+0.12+0.09s
+  firefox       n=100 mean 5.961s median 5.275s p95 12.970s total 596.1s 1.44x {'success': 100} heap 72->371 MiB (3406.2 KiB/gen) boot 1.25+0.12+0.10s
+  identical YAMLs native vs node-pyodide: 0/100
+== tunic (long)
+  native        n=1000 mean 0.474s median 0.428s p95 0.817s total 474.2s - {'success': 1000} heap 58->77 MiB (19.4 KiB/gen)
+  node-pyodide  n=1000 mean 0.606s median 0.562s p95 1.046s total 605.7s 1.28x {'success': 1000} heap 50->50 MiB (0.0 KiB/gen) boot 1.41+0.13+0.04s
+  identical YAMLs native vs node-pyodide: 1000/1000

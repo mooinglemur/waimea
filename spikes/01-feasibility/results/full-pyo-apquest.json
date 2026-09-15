@@ -1,0 +1,658 @@
+{
+ "python": "3.13.2 (main, May  7 2026, 08:28:34) [Clang 21.0.0git (https:/github.com/llvm/llvm-project 2f05451198e2f222ec66cec489",
+ "recursionlimit": 1000,
+ "import_seconds": 0.594162686,
+ "runs": [
+  {
+   "i": 0,
+   "yaml": "3dbc66e3da4c",
+   "outcome": "success",
+   "seconds": 0.027698513999999896
+  },
+  {
+   "i": 1,
+   "yaml": "c69db840bf28",
+   "outcome": "success",
+   "seconds": 0.0072601329999999464
+  },
+  {
+   "i": 2,
+   "yaml": "8c5590cb2f3e",
+   "outcome": "success",
+   "seconds": 0.006340997000000126
+  },
+  {
+   "i": 3,
+   "yaml": "08235ee40d20",
+   "outcome": "success",
+   "seconds": 0.008560165000000008
+  },
+  {
+   "i": 4,
+   "yaml": "94a598f64d8b",
+   "outcome": "success",
+   "seconds": 0.006562046999999627
+  },
+  {
+   "i": 5,
+   "yaml": "d9ead7d0baee",
+   "outcome": "success",
+   "seconds": 0.006206755000000008
+  },
+  {
+   "i": 6,
+   "yaml": "36b25de5513f",
+   "outcome": "success",
+   "seconds": 0.00612908400000034
+  },
+  {
+   "i": 7,
+   "yaml": "1b1818272f47",
+   "outcome": "success",
+   "seconds": 0.00658012699999988
+  },
+  {
+   "i": 8,
+   "yaml": "64bf3d09ca44",
+   "outcome": "success",
+   "seconds": 0.006781039999999905
+  },
+  {
+   "i": 9,
+   "yaml": "b31b7fce8e95",
+   "outcome": "success",
+   "seconds": 0.006929331999999899
+  },
+  {
+   "i": 10,
+   "yaml": "543bbd14c998",
+   "outcome": "success",
+   "seconds": 0.006845289999999782
+  },
+  {
+   "i": 11,
+   "yaml": "9ca3db98fce6",
+   "outcome": "success",
+   "seconds": 0.006315325999999732
+  },
+  {
+   "i": 12,
+   "yaml": "2d39dc36f205",
+   "outcome": "success",
+   "seconds": 0.0066765890000000105
+  },
+  {
+   "i": 13,
+   "yaml": "8af1e5311914",
+   "outcome": "success",
+   "seconds": 0.006876950000000104
+  },
+  {
+   "i": 14,
+   "yaml": "0b3ed0ff8fbd",
+   "outcome": "success",
+   "seconds": 0.006416677000000259
+  },
+  {
+   "i": 15,
+   "yaml": "e99db1f455dd",
+   "outcome": "success",
+   "seconds": 0.005961372999999881
+  },
+  {
+   "i": 16,
+   "yaml": "3a25f54d223d",
+   "outcome": "success",
+   "seconds": 0.006670237999999884
+  },
+  {
+   "i": 17,
+   "yaml": "8e339fc81dd6",
+   "outcome": "success",
+   "seconds": 0.006527457999999875
+  },
+  {
+   "i": 18,
+   "yaml": "9c3df48048b4",
+   "outcome": "success",
+   "seconds": 0.005945692000000058
+  },
+  {
+   "i": 19,
+   "yaml": "eaa7bc3d49e1",
+   "outcome": "success",
+   "seconds": 0.006063134000000137
+  },
+  {
+   "i": 20,
+   "yaml": "3b750bd944e5",
+   "outcome": "success",
+   "seconds": 0.006053274000000108
+  },
+  {
+   "i": 21,
+   "yaml": "da57985aeeb6",
+   "outcome": "success",
+   "seconds": 0.005876631000000021
+  },
+  {
+   "i": 22,
+   "yaml": "567fccf81c9c",
+   "outcome": "success",
+   "seconds": 0.006152135000000225
+  },
+  {
+   "i": 23,
+   "yaml": "5b79e13dcb05",
+   "outcome": "success",
+   "seconds": 0.006552357000000342
+  },
+  {
+   "i": 24,
+   "yaml": "306355262925",
+   "outcome": "success",
+   "seconds": 0.006832621000000039
+  },
+  {
+   "i": 25,
+   "yaml": "f100cabbd6e6",
+   "outcome": "success",
+   "seconds": 0.007167074000000273
+  },
+  {
+   "i": 26,
+   "yaml": "6fa4455f7d2f",
+   "outcome": "success",
+   "seconds": 0.00798284000000038
+  },
+  {
+   "i": 27,
+   "yaml": "79cd0126ca16",
+   "outcome": "success",
+   "seconds": 0.006342275000000175
+  },
+  {
+   "i": 28,
+   "yaml": "8272dbdf52bf",
+   "outcome": "success",
+   "seconds": 0.005707901000000071
+  },
+  {
+   "i": 29,
+   "yaml": "e15c79bf5067",
+   "outcome": "success",
+   "seconds": 0.006658738000000053
+  },
+  {
+   "i": 30,
+   "yaml": "177e59102045",
+   "outcome": "success",
+   "seconds": 0.006764149999999969
+  },
+  {
+   "i": 31,
+   "yaml": "7ad645cd268c",
+   "outcome": "success",
+   "seconds": 0.007363114999999976
+  },
+  {
+   "i": 32,
+   "yaml": "0721e24e8daa",
+   "outcome": "success",
+   "seconds": 0.006529807999999804
+  },
+  {
+   "i": 33,
+   "yaml": "ae54763e63c8",
+   "outcome": "success",
+   "seconds": 0.006651238000000337
+  },
+  {
+   "i": 34,
+   "yaml": "83ab4728b830",
+   "outcome": "success",
+   "seconds": 0.0060091540000000165
+  },
+  {
+   "i": 35,
+   "yaml": "cb6a30cc5b49",
+   "outcome": "success",
+   "seconds": 0.006558467000000068
+  },
+  {
+   "i": 36,
+   "yaml": "a636987e0a36",
+   "outcome": "success",
+   "seconds": 0.007368214999999623
+  },
+  {
+   "i": 37,
+   "yaml": "e89973316838",
+   "outcome": "success",
+   "seconds": 0.007926059999999957
+  },
+  {
+   "i": 38,
+   "yaml": "3b073a41d70a",
+   "outcome": "success",
+   "seconds": 0.006556267999999754
+  },
+  {
+   "i": 39,
+   "yaml": "352df986c95b",
+   "outcome": "success",
+   "seconds": 0.005619788000000181
+  },
+  {
+   "i": 40,
+   "yaml": "61afd6be0ecf",
+   "outcome": "success",
+   "seconds": 0.005889362000000009
+  },
+  {
+   "i": 41,
+   "yaml": "12f2aad0c581",
+   "outcome": "success",
+   "seconds": 0.006453637000000345
+  },
+  {
+   "i": 42,
+   "yaml": "55ba718afe06",
+   "outcome": "success",
+   "seconds": 0.005477047999999929
+  },
+  {
+   "i": 43,
+   "yaml": "699f9fd2bf26",
+   "outcome": "success",
+   "seconds": 0.0053699179999999735
+  },
+  {
+   "i": 44,
+   "yaml": "42d2a8e15abb",
+   "outcome": "success",
+   "seconds": 0.006366185999999718
+  },
+  {
+   "i": 45,
+   "yaml": "e6c28d4e5a80",
+   "outcome": "success",
+   "seconds": 0.005968743000000387
+  },
+  {
+   "i": 46,
+   "yaml": "7f06ab6a8f87",
+   "outcome": "success",
+   "seconds": 0.00604750300000001
+  },
+  {
+   "i": 47,
+   "yaml": "8fb98785fbd7",
+   "outcome": "success",
+   "seconds": 0.007339254999999767
+  },
+  {
+   "i": 48,
+   "yaml": "01ffae99a51c",
+   "outcome": "success",
+   "seconds": 0.00626525599999983
+  },
+  {
+   "i": 49,
+   "yaml": "4078e3c038e2",
+   "outcome": "success",
+   "seconds": 0.005844619999999967
+  },
+  {
+   "i": 50,
+   "yaml": "482bcfed6245",
+   "outcome": "success",
+   "seconds": 0.005749709999999908
+  },
+  {
+   "i": 51,
+   "yaml": "a6eeff01cc13",
+   "outcome": "success",
+   "seconds": 0.0054515870000000355
+  },
+  {
+   "i": 52,
+   "yaml": "7c7f66d4b5d6",
+   "outcome": "success",
+   "seconds": 0.005990634000000217
+  },
+  {
+   "i": 53,
+   "yaml": "20231aa76315",
+   "outcome": "success",
+   "seconds": 0.00560529799999987
+  },
+  {
+   "i": 54,
+   "yaml": "97b3724e409c",
+   "outcome": "success",
+   "seconds": 0.005861091999999957
+  },
+  {
+   "i": 55,
+   "yaml": "a611891b1087",
+   "outcome": "success",
+   "seconds": 0.006199064000000032
+  },
+  {
+   "i": 56,
+   "yaml": "55afb415f1ed",
+   "outcome": "success",
+   "seconds": 0.005594859999999979
+  },
+  {
+   "i": 57,
+   "yaml": "d2860f8589f5",
+   "outcome": "success",
+   "seconds": 0.005780741000000145
+  },
+  {
+   "i": 58,
+   "yaml": "1a282993dde2",
+   "outcome": "success",
+   "seconds": 0.005813360999999961
+  },
+  {
+   "i": 59,
+   "yaml": "6a8f508d3b42",
+   "outcome": "success",
+   "seconds": 0.010707694000000156
+  },
+  {
+   "i": 60,
+   "yaml": "548105307c80",
+   "outcome": "success",
+   "seconds": 0.008587455999999882
+  },
+  {
+   "i": 61,
+   "yaml": "c9743fd41c74",
+   "outcome": "success",
+   "seconds": 0.007167192999999905
+  },
+  {
+   "i": 62,
+   "yaml": "70acc2c2962a",
+   "outcome": "success",
+   "seconds": 0.005668399999999796
+  },
+  {
+   "i": 63,
+   "yaml": "9e0ee82a754d",
+   "outcome": "success",
+   "seconds": 0.006034773000000104
+  },
+  {
+   "i": 64,
+   "yaml": "0619a328589a",
+   "outcome": "success",
+   "seconds": 0.005681731000000134
+  },
+  {
+   "i": 65,
+   "yaml": "42fb4db06b69",
+   "outcome": "success",
+   "seconds": 0.006727317999999816
+  },
+  {
+   "i": 66,
+   "yaml": "6f192a543ff1",
+   "outcome": "success",
+   "seconds": 0.006006343000000136
+  },
+  {
+   "i": 67,
+   "yaml": "0375c076972a",
+   "outcome": "success",
+   "seconds": 0.0061838039999999594
+  },
+  {
+   "i": 68,
+   "yaml": "d21706dbdb61",
+   "outcome": "success",
+   "seconds": 0.0058594819999999714
+  },
+  {
+   "i": 69,
+   "yaml": "31b83425fe6a",
+   "outcome": "success",
+   "seconds": 0.006832531000000142
+  },
+  {
+   "i": 70,
+   "yaml": "59f36ee01cd5",
+   "outcome": "success",
+   "seconds": 0.0060797930000000555
+  },
+  {
+   "i": 71,
+   "yaml": "9d98565ec05a",
+   "outcome": "success",
+   "seconds": 0.006205174999999841
+  },
+  {
+   "i": 72,
+   "yaml": "4e079c39a5e8",
+   "outcome": "success",
+   "seconds": 0.005864752000000362
+  },
+  {
+   "i": 73,
+   "yaml": "72e0aeebd5b4",
+   "outcome": "success",
+   "seconds": 0.006354455999999953
+  },
+  {
+   "i": 74,
+   "yaml": "b6c685540737",
+   "outcome": "success",
+   "seconds": 0.006609359000000037
+  },
+  {
+   "i": 75,
+   "yaml": "0f7012143e1e",
+   "outcome": "success",
+   "seconds": 0.00579436099999997
+  },
+  {
+   "i": 76,
+   "yaml": "2233980131e0",
+   "outcome": "success",
+   "seconds": 0.006441836000000034
+  },
+  {
+   "i": 77,
+   "yaml": "6ee3ad96a2cb",
+   "outcome": "success",
+   "seconds": 0.0055569700000002165
+  },
+  {
+   "i": 78,
+   "yaml": "ed2b1f619bcf",
+   "outcome": "success",
+   "seconds": 0.005475338000000107
+  },
+  {
+   "i": 79,
+   "yaml": "87bab33298d4",
+   "outcome": "success",
+   "seconds": 0.007310715000000023
+  },
+  {
+   "i": 80,
+   "yaml": "e38c73303cfe",
+   "outcome": "success",
+   "seconds": 0.005848360999999969
+  },
+  {
+   "i": 81,
+   "yaml": "9426e0f65212",
+   "outcome": "success",
+   "seconds": 0.0055249479999996964
+  },
+  {
+   "i": 82,
+   "yaml": "bf543a1a10f4",
+   "outcome": "success",
+   "seconds": 0.005563319999999816
+  },
+  {
+   "i": 83,
+   "yaml": "b904915a79b9",
+   "outcome": "success",
+   "seconds": 0.005744240000000289
+  },
+  {
+   "i": 84,
+   "yaml": "e5f6f9a6fcac",
+   "outcome": "success",
+   "seconds": 0.005820410999999748
+  },
+  {
+   "i": 85,
+   "yaml": "6d7ab6ebdbeb",
+   "outcome": "success",
+   "seconds": 0.006061443000000111
+  },
+  {
+   "i": 86,
+   "yaml": "bca581f6d294",
+   "outcome": "success",
+   "seconds": 0.0060768749999997596
+  },
+  {
+   "i": 87,
+   "yaml": "eee4b2019578",
+   "outcome": "success",
+   "seconds": 0.006320773999999751
+  },
+  {
+   "i": 88,
+   "yaml": "47ae58c366ea",
+   "outcome": "success",
+   "seconds": 0.005399098999999907
+  },
+  {
+   "i": 89,
+   "yaml": "b357a605dff3",
+   "outcome": "success",
+   "seconds": 0.006430786000000133
+  },
+  {
+   "i": 90,
+   "yaml": "b5d2b4b92840",
+   "outcome": "success",
+   "seconds": 0.005575989000000003
+  },
+  {
+   "i": 91,
+   "yaml": "40f2cf467119",
+   "outcome": "success",
+   "seconds": 0.005415738000000392
+  },
+  {
+   "i": 92,
+   "yaml": "07095f4bb41e",
+   "outcome": "success",
+   "seconds": 0.005758339999999862
+  },
+  {
+   "i": 93,
+   "yaml": "a8bf21ca0ea4",
+   "outcome": "success",
+   "seconds": 0.00544598900000004
+  },
+  {
+   "i": 94,
+   "yaml": "19d411b1c7fb",
+   "outcome": "success",
+   "seconds": 0.005609898999999974
+  },
+  {
+   "i": 95,
+   "yaml": "632a47eb2aa8",
+   "outcome": "success",
+   "seconds": 0.008301223000000135
+  },
+  {
+   "i": 96,
+   "yaml": "3febf8d25a63",
+   "outcome": "success",
+   "seconds": 0.006564358999999964
+  },
+  {
+   "i": 97,
+   "yaml": "828453df50e5",
+   "outcome": "success",
+   "seconds": 0.005855911000000269
+  },
+  {
+   "i": 98,
+   "yaml": "a2989c408f11",
+   "outcome": "success",
+   "seconds": 0.005969513000000148
+  },
+  {
+   "i": 99,
+   "yaml": "7a12310bad3d",
+   "outcome": "success",
+   "seconds": 0.006822520000000054
+  }
+ ],
+ "heap": [
+  {
+   "after": 10,
+   "bytes": 30212096
+  },
+  {
+   "after": 20,
+   "bytes": 30212096
+  },
+  {
+   "after": 30,
+   "bytes": 30212096
+  },
+  {
+   "after": 40,
+   "bytes": 30212096
+  },
+  {
+   "after": 50,
+   "bytes": 30212096
+  },
+  {
+   "after": 60,
+   "bytes": 30212096
+  },
+  {
+   "after": 70,
+   "bytes": 30212096
+  },
+  {
+   "after": 80,
+   "bytes": 30212096
+  },
+  {
+   "after": 90,
+   "bytes": 30212096
+  },
+  {
+   "after": 100,
+   "bytes": 30212096
+  }
+ ],
+ "phases": {
+  "loadPyodide": 1.361444656,
+  "loadPackage": 0.1274061039999999,
+  "unpack": 0.07860209100000021,
+  "prepare": 0.02136782900000003,
+  "bench": 1.254103941
+ },
+ "nodeRss": 192671744,
+ "heapFinal": 30212096
+}

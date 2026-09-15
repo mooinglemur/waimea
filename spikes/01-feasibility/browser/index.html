@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>waimea spike probe</title>
+<pre id="out"></pre>
+<script type="module">
+  const params = new URLSearchParams(location.search);
+  window.probe = { last: null, done: false, result: null, error: null, messages: 0 };
+  const worker = new Worker("./worker.mjs", { type: "module" });
+  worker.onmessage = ({ data }) => {
+    window.probe.messages++;
+    if (data.type === "ok") window.probe.last = data.depth;
+    else if (data.type === "result") { window.probe.result = data.result; window.probe.done = true; }
+    else if (data.type === "error") { window.probe.error = data.text; window.probe.done = true; }
+    document.getElementById("out").textContent = JSON.stringify(window.probe).slice(0, 2000);
+  };
+  worker.onerror = (e) => { window.probe.error = `worker onerror: ${e.message}`; window.probe.done = true; };
+  worker.postMessage(Object.fromEntries(params));
+</script>

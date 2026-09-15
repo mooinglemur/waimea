@@ -98,6 +98,18 @@ test("the manifest points at the content-hashed core bundle, which is immutable"
   assert.equal((await get(port, `/bundles/core-${"0".repeat(64)}.zip`)).status, 404);
 });
 
+test("the manifest carries the configured site name, or Waimea by default", async () => {
+  const configured = await loadRuntime({
+    coreBundle: join(root, "build", "core.zip"),
+    calibrationFile: join(root, "calibration.json"),
+    inputs,
+    siteName: "AP Tests",
+  });
+  assert.deepEqual(JSON.parse(configured.manifest).site, { name: "AP Tests" });
+  const { port } = await serve();
+  assert.deepEqual(JSON.parse((await get(port, "/manifest.json")).body).site, { name: "Waimea" });
+});
+
 test("the Pyodide runtime is served only under its pinned version", async () => {
   const { port } = await serve();
   const res = await get(port, "/runtime/pyodide-0.29.4/pyodide.mjs");

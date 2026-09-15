@@ -356,7 +356,12 @@ $("again").addEventListener("click", () => {
 setStatus("running", "Loading the test runtime…");
 try {
   state.manifest = await fetchOk("/manifest.json", "json");
-  const { archipelago, pyodide } = state.manifest;
+  const { archipelago, pyodide, site } = state.manifest;
+  // Set by the server's WAIMEA_SITE_NAME.
+  if (site?.name) {
+    document.querySelector(".brand").textContent = site.name;
+    document.title = site.name;
+  }
   $("version").textContent = `waimea · Archipelago ${archipelago.version} (${archipelago.repository}@${archipelago.commit.slice(0, 7)}) · Pyodide ${pyodide.version}`;
   $("apworld").disabled = false;
   setStatus("", "Choose an apworld file to see the tests that will run.");

@@ -17,6 +17,8 @@ export const config = {
   // Built by build/build-core.mjs; core.json beside it describes the build.
   coreBundle: resolve(env.WAIMEA_CORE_BUNDLE ?? join(appDir, "build", "out", "core.zip")),
   calibrationFile: resolve(env.WAIMEA_CALIBRATION ?? join(appDir, "deploy", "calibration.json")),
+  // Shown at the top left of the page and in the browser tab.
+  siteName: env.WAIMEA_SITE_NAME?.trim() || "Waimea",
   host: env.WAIMEA_HOST ?? "::",
   port: portSetting(env, "WAIMEA_PORT", 8080, log),
   inputs: JSON.parse(readFileSync(join(vendorDir, "inputs.json"), "utf8")),

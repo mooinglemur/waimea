@@ -8,7 +8,7 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
-export async function loadRuntime({ coreBundle, calibrationFile, inputs }) {
+export async function loadRuntime({ coreBundle, calibrationFile, inputs, siteName = "Waimea" }) {
   const core = await readFile(coreBundle);
   const coreHash = createHash("sha256").update(core).digest("hex");
   let build = null;
@@ -19,6 +19,7 @@ export async function loadRuntime({ coreBundle, calibrationFile, inputs }) {
   }
   const manifest = {
     schema: 1,
+    site: { name: siteName },
     archipelago: {
       version: inputs.archipelago.version,
       repository: inputs.archipelago.repository,

@@ -48,7 +48,7 @@ export const WORKER_POLICY = [
   "script-src 'self' 'wasm-unsafe-eval'",
   "connect-src 'self'",
 ].join("; ");
-const WORKER_SCRIPTS = new Set(["/fuzz-worker.mjs"]);
+const WORKER_SCRIPTS = new Set(["/fuzz-worker.mjs", "/test-worker.mjs"]);
 
 const compressedBodies = new Map();
 

@@ -28,9 +28,15 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `waimea_boot.py` prepares the interpreter;
   - `unit_tests.py` runs an apworld's unit tests as CI does;
   - `fuzz_worker.py` runs fuzz generations for the orchestrator;
+  - `apworld_info.py` describes an uploaded apworld (module, manifest, games);
   - the rest are stand-ins for modules Pyodide lacks (some adapted from Kalapana).
-- `web/`: browser-side modules. So far these are the fuzz orchestrator (`fuzz-orchestrator.mjs`), its
-  worker (`fuzz-worker.mjs`) and CI's variant table (`fuzz-variants.mjs`).
+- `web/`: the page and its modules.
+  - `session.mjs` runs a whole session (inspection, unit tests, calibration, fuzz variants) as a stream of
+    events.
+  - `test-worker.mjs` and `fuzz-worker.mjs` are the two worker types.
+  - `fuzz-orchestrator.mjs` schedules a variant's generations across workers.
+  - `fuzz-variants.mjs` is CI's variant table.
+  - `report.mjs` and `zip.mjs` build the downloadable report.
 - `build/`: builds `core.zip`, the Archipelago runtime each worker unpacks, in CI's image layout.
 - `web/calibration.mjs`, `calibration/` and `deploy/calibration.json`: fuzz timeout calibration.
   - The browser times a fixed workload against a reference measured natively by

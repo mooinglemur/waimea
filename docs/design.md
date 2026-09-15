@@ -393,7 +393,16 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
        separate page and worker security policies.
      - The image builds reproducibly (the same core bundle hash as a local build) and runs as an
        unprivileged user.
-   - **To do.** The test runner UI: picker, test list, progress, details, summary and report.
+   - **Built.** The session engine, testable without the page:
+     - `web/session.mjs` inspects the apworld, runs unit tests in `web/test-worker.mjs`, calibrates,
+       then runs the selected variants, reporting progress as events;
+     - `web/report.mjs` and `web/zip.mjs` build the report zip.
+
+     A Librarian session in headless Chrome against the real server took 31 s: inspection, unit tests
+     (the same 2 failures as CI), calibration, and 8 runs each of `default` and `check-ut`. CI's aggregators
+     read its report (`spikes/05-session/`).
+   - **To do.** The page: picker, test list and options, progress with expandable details, summary,
+     download.
 6. **Self-check**, if it proves worthwhile.
 
 Out of scope: replacing the index CI, posting results to GitHub or apdiff-viewer, game clients, and anything
@@ -404,7 +413,9 @@ that needs native executables.
 1. **Coverage.** Kalapana showed 449 of 507 index worlds import under Pyodide, but that doesn't show how
    many generate.
 2. **Default run counts.** CI's 5000 runs take about 80 minutes for a Stardew-sized world in Chrome at four
-   workers.
+   workers. `web/session.mjs` provisionally defaults to a tenth of CI's counts (500 for the full variants,
+   50 for the check variants). They're editable per variant and recorded in the report. The values still
+   need confirming.
 3. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
    orchestrator.
 4. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of

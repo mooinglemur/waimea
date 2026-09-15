@@ -6,22 +6,39 @@
 
 import { calibrate, scaledTimeout } from "./calibration.mjs";
 import { runVariant } from "./fuzz-orchestrator.mjs";
-import { CI_TIMEOUT_SECONDS, VARIANTS } from "./fuzz-variants.mjs";
+import { CI_RUNS, CI_TIMEOUT_SECONDS, VARIANTS } from "./fuzz-variants.mjs";
 
-// Browser defaults, a tenth of CI's 5000 and 500: CI's counts take hours in a browser for heavy worlds.
-export const DEFAULT_RUNS = { full: 500, check: 50 };
+// Run-count presets the page offers as one control. CI's counts are the default: many apworlds fuzz within a
+// couple of minutes in CI, so they finish here too. Heavy worlds can take hours, which Quick is for.
+export const PRESETS = [
+  { id: "ci", label: "CI", description: "The index CI's run counts", runs: CI_RUNS },
+  { id: "quick", label: "Quick", description: "A tenth of the index CI's run counts", runs: { full: CI_RUNS.full / 10, check: CI_RUNS.check / 10 } },
+];
+export const DEFAULT_PRESET = "ci";
 export const HEAP_LIMIT_BYTES = 1536 * 2 ** 20;
 
 export const defaultJobs = (cores) => Math.max(1, Math.min(4, (cores || 2) - 1));
 
+/** Sets every variant's run count from a preset. Which variants are enabled is left alone. */
+export function applyPreset(plan, presetId) {
+  const preset = PRESETS.find((p) => p.id === presetId);
+  if (!preset) throw new Error(`unknown preset ${presetId}`);
+  for (const entry of plan.variants) {
+    const variant = VARIANTS.find((v) => v.name === entry.name);
+    entry.runs = preset.runs[variant.runs];
+  }
+  plan.preset = preset.id;
+  return plan;
+}
+
 export function defaultPlan(cores) {
-  return {
+  return applyPreset({
     unitTests: true,
     jobs: defaultJobs(cores),
-    variants: VARIANTS.map((v) => ({ name: v.name, enabled: !v.unsupported, runs: DEFAULT_RUNS[v.runs] })),
+    variants: VARIANTS.map((v) => ({ name: v.name, enabled: !v.unsupported, runs: 0 })),
     annotations: null,
     metaYaml: null,
-  };
+  }, DEFAULT_PRESET);
 }
 
 export const apquestPath = (manifest) => `/ap/supported_worlds/apquest-${manifest.archipelago.version}.apworld`;

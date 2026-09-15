@@ -79,7 +79,12 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    will be built, so URL entry waits until an apworld host allows cross-origin downloads.
 2. The page lists the tests to run, each section with a checkbox:
    - the unit tests;
-   - each fuzz variant, with an editable run count;
+   - each fuzz variant, with an editable run count, and a preset control that sets them all at once:
+     - **CI**, the default: 5000 runs for the full variants and 500 for the check variants, as in the index
+       CI. Many apworlds fuzz within a couple of minutes there, so they finish here too.
+     - **Quick**: a tenth of that, for heavy worlds, where CI's counts can take hours in a browser.
+
+     The preset and each variant's count are recorded in the report;
    - a worker count, defaulting to about `min(4, cores - 1)`;
    - a per-generation timeout, defaulting to CI's 30 seconds;
    - optional file pickers for an expectation-annotations TOML and a fuzz-meta YAML. By default neither is
@@ -412,12 +417,8 @@ that needs native executables.
 
 1. **Coverage.** Kalapana showed 449 of 507 index worlds import under Pyodide, but that doesn't show how
    many generate.
-2. **Default run counts.** CI's 5000 runs take about 80 minutes for a Stardew-sized world in Chrome at four
-   workers. `web/session.mjs` provisionally defaults to a tenth of CI's counts (500 for the full variants,
-   50 for the check variants). They're editable per variant and recorded in the report. The values still
-   need confirming.
-3. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
+2. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
    orchestrator.
-4. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
+3. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
    Librarian under `check-collect-accessibility`, Waimea reported 6 ignored runs, all timeouts, where
    native reported 1. The report should count timeouts separately from what hooks reclassify them to.

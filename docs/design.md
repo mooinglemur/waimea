@@ -339,3 +339,11 @@ that needs native executables.
    workers.
 3. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
    orchestrator.
+4. **Timeouts for slow worlds.** Generation in the browser is 1.3× to 2× slower than native, so a
+   generation that finishes just inside CI's 30-second limit can time out in Waimea. With 10 runs of SM64EX
+   Spicy, Waimea timed out 7 times and native 4. The effect can also hide: most check hooks reclassify a
+   timeout as ignored. With 100 runs of Librarian under `check-collect-accessibility`, whose hook does
+   heavy work after each generation, Waimea reported 6 ignored runs, all timeouts, where native reported 1.
+   The options are to keep CI's limit, and say in the report that a timeout (or an ignored run from one)
+   may pass natively, or to scale the limit by a measured slowdown. The report can at least count timeouts
+   separately from what hooks reclassify them to.

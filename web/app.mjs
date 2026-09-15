@@ -4,7 +4,7 @@ import { append, dot, formatSeconds, h, setDot } from "./dom.mjs";
 import { FuzzVariantView } from "./fuzz-view.mjs";
 import { CI_TIMEOUT_SECONDS, VARIANTS } from "./fuzz-variants.mjs";
 import { buildReport } from "./report.mjs";
-import { PRESETS, applyPreset, defaultPlan, inspectApworld, runSession } from "./session.mjs";
+import { PRESETS, applyPreset, defaultPlan, inspectApworld, pairedJobs, runSession } from "./session.mjs";
 import { UnitTestsView } from "./unit-view.mjs";
 import { createZip } from "./zip.mjs";
 
@@ -122,7 +122,7 @@ function renderOptions() {
   const plan = defaultPlan(navigator.hardwareConcurrency);
   if (previous) {
     // Keep choices across a rerun or a different file.
-    Object.assign(plan, { unitTests: previous.unitTests, jobs: previous.jobs, preset: previous.preset });
+    Object.assign(plan, { unitTests: previous.unitTests, jobs: previous.jobs, halvePairedJobs: previous.halvePairedJobs, preset: previous.preset });
     plan.variants = previous.variants.map((v) => ({ ...v }));
   }
   state.plan = plan;
@@ -146,6 +146,18 @@ function renderOptions() {
       },
     }, preset.label),
   );
+
+  // A paired variant (check-determinism) runs two interpreters per worker; this can halve its workers.
+  const halveBox = h("input", { type: "checkbox", onchange: (e) => { plan.halvePairedJobs = e.target.checked; syncHalve(); } });
+  const halveHint = h("span", { class: "hint" });
+  const syncHalve = () => {
+    if (plan.jobs < 2) plan.halvePairedJobs = false;
+    halveBox.disabled = plan.jobs < 2;
+    halveBox.checked = plan.halvePairedJobs;
+    const pairs = pairedJobs(plan);
+    halveHint.textContent = `(${pairs} worker ${pairs === 1 ? "pair" : "pairs"}, ${2 * pairs} interpreters)`;
+  };
+  syncHalve();
 
   const runInputs = new Map();
   const rows = VARIANTS.map((variant) => {
@@ -176,7 +188,10 @@ function renderOptions() {
       "tr",
       { class: variant.unsupported ? "unsupported" : "" },
       h("td", {}, enabled),
-      h("td", {}, h("div", { class: "variant-name" }, variant.name), h("div", { class: "hint" }, variant.unsupported ?? variant.description)),
+      h("td", {},
+        h("div", { class: "variant-name" }, variant.name),
+        h("div", { class: "hint" }, variant.unsupported ?? variant.description),
+        variant.paired ? h("label", { class: "variant-option" }, halveBox, "Use half the workers", halveHint) : null),
       h("td", { class: "runs-cell" }, runs),
     );
   });
@@ -193,7 +208,7 @@ function renderOptions() {
       `Generations time out after CI's ${CI_TIMEOUT_SECONDS} seconds, scaled by how fast this browser is compared with CI's runner, measured before fuzzing starts.`),
     h("table", { class: "variants" }, h("thead", {}, h("tr", {}, h("th", {}, h("span", { class: "visually-hidden" }, "Run")), h("th", {}, "Variant"), h("th", { class: "runs-cell" }, "Runs"))), h("tbody", {}, rows)),
     h("div", { class: "option-row" },
-      h("label", {}, "Workers ", h("input", { type: "number", min: 1, max: cores, value: plan.jobs, onchange: (e) => (plan.jobs = Math.min(cores, Math.max(1, Math.floor(Number(e.target.value) || 1)))) })),
+      h("label", {}, "Workers ", h("input", { type: "number", min: 1, max: cores, value: plan.jobs, onchange: (e) => { plan.jobs = Math.min(cores, Math.max(1, Math.floor(Number(e.target.value) || 1))); syncHalve(); } })),
       h("span", { class: "hint" }, `Each worker is a Python interpreter using a few hundred MB. This device reports ${cores} cores.`)),
     h("details", { class: "extra-files" },
       h("summary", {}, "Optional files"),

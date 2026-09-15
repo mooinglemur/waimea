@@ -82,6 +82,76 @@ test("a worker past the heap limit is replaced after its run", async () => {
   assert.equal(log.spawned, 4);
 });
 
+// A fake paired variant: fuzz workers ask for every run to be regenerated, and finish it from the response as the
+// determinism hook does. regenerate(i) returns the regenerator's response, "hang", or "fatal".
+function fakePairSpawn(regenerate = () => ({ status: "ok", state: "same" })) {
+  const log = { spawned: 0, regenerators: 0 };
+  const spawn = ({ onMessage }) => {
+    log.spawned++;
+    let alive = true;
+    let current = null;
+    const send = (message) => setTimeout(() => alive && onMessage(message), 1);
+    return {
+      post(message) {
+        if (message.type === "init") {
+          if (message.role === "regenerator") log.regenerators++;
+          send({ type: "ready", game: message.role === "regenerator" ? null : "Fake", seconds: 0.01 });
+        } else if (message.type === "timeoutOutcome") send({ type: "timeoutOutcome", outcome: "timeout" });
+        else if (message.type === "run") {
+          current = message.i;
+          send({ type: "started", i: current, yamls: { [`${current}-0.yaml`]: "game: Fake\n" } });
+          send({ type: "regenerate", request: { i: current } });
+        } else if (message.type === "regenerate") {
+          const response = regenerate(message.request.i);
+          if (response === "hang") return;
+          if (response === "fatal") return send({ type: "fatal", text: "RangeError: Maximum call stack size exceeded" });
+          send({ type: "regenerated", response, heapBytes: 10 });
+        } else if (message.type === "resume") {
+          const { response } = message;
+          if (response.status === "ok" && response.state === "same") return send({ type: "result", outcome: "success", key: null, dump: null, seconds: 0.01, heapBytes: 10 });
+          const key = response.status === "error" ? `Subprocess generation failed:\n${response.text}` : "Non-deterministic generation:\n=== ITEMPOOL ===";
+          send({ type: "result", outcome: "failure", key, dump: { kind: "error", files: { [`${current}.log`]: key } }, seconds: 0.01, heapBytes: 10 });
+        }
+      },
+      terminate() {
+        alive = false;
+      },
+    };
+  };
+  return { spawn, log };
+}
+
+test("a paired variant gives each worker a regenerator and passes requests between them", async () => {
+  const { spawn, log } = fakePairSpawn();
+  const result = await runVariant({ ...base, spawn, runs: 6, jobs: 2, paired: true });
+  assert.deepEqual(result.report.stats, { total: 6, success: 6, failure: 0, timeout: 0, ignored: 0 });
+  assert.equal(result.game, "Fake");
+  assert.deepEqual(log, { spawned: 4, regenerators: 2 });
+});
+
+test("a paired run whose regeneration differs is a failure under the hook's message", async () => {
+  const { spawn } = fakePairSpawn((i) => ({ status: "ok", state: i === 1 ? "different" : "same" }));
+  const result = await runVariant({ ...base, spawn, runs: 3, jobs: 1, paired: true });
+  assert.deepEqual(result.report.errors, { fake: { "Non-deterministic generation:\n=== ITEMPOOL ===": [1] } });
+});
+
+test("a timeout while regenerating replaces both workers of the pair", async () => {
+  const { spawn, log } = fakePairSpawn((i) => (i === 0 ? "hang" : { status: "ok", state: "same" }));
+  const result = await runVariant({ ...base, spawn, runs: 2, jobs: 1, paired: true, timeoutSeconds: 0.05 });
+  assert.deepEqual(result.report.stats, { total: 2, success: 1, failure: 0, timeout: 1, ignored: 0 });
+  assert.deepEqual(log, { spawned: 4, regenerators: 2 });
+});
+
+test("a regenerator's fatal error answers its worker as the hook's subprocess error, and it is replaced", async () => {
+  const { spawn, log } = fakePairSpawn((i) => (i === 0 ? "fatal" : { status: "ok", state: "same" }));
+  const result = await runVariant({ ...base, spawn, runs: 2, jobs: 1, paired: true });
+  assert.deepEqual(result.report.stats, { total: 2, success: 1, failure: 1, timeout: 0, ignored: 0 });
+  assert.match(Object.keys(result.report.errors.fake)[0], /^Subprocess generation failed:\nFatal error in the regenerating worker's Python interpreter:\nRangeError/);
+  assert.equal(result.counters.regeneratorFatal, 1);
+  assert.equal(result.counters.fatal, 0);
+  assert.deepEqual(log, { spawned: 3, regenerators: 2 });
+});
+
 test("aborting ends the variant with the runs completed so far", async () => {
   const controller = new AbortController();
   const { spawn } = fakeSpawn((i) => (i >= 2 ? "hang" : {}));

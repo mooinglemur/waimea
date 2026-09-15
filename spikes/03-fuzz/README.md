@@ -18,6 +18,18 @@ from the fork. Runs shared a 24-core machine with each other.
 | Stardew `default`, 12 runs, 2 s timeout (first run) | 2 successes, 10 timeouts | 2 successes, 10 timeouts |
 | Stardew `default`, 12 runs, 2 s timeout (second run) | 4 successes, 8 timeouts | 1 success, 11 timeouts |
 
+`check-determinism`, run on 2026-09-15 after it was built with paired workers, 2 pairs:
+
+| Test | Waimea (Pyodide) | Native `fuzz.py` |
+|---|---|---|
+| `waimea_nondeterministic` fixture, 6 runs | 6 failures, "Itempool: Same items but different order", 2.5 s | the same 6 failures, 1 s |
+| TUNIC, 12 runs | 12 successes, 13.3 s | 12 successes, 6 s |
+| APQuest, 20 runs | 20 successes, 3.5 s | not run |
+| TUNIC, 12 runs, 1 s timeout | 5 successes, 7 timeouts; 12 worker restarts, 5 of them regenerating partners | not run |
+
+Each failure's "first diff" names different tokens per pair and per runtime, since it follows each
+interpreter's hash order.
+
 The seven hook variants compared natively were `check-collect-accessibility`,
 `check-indirect-conditions`, `check-item-location-count`, `check-lambda-capture`,
 `check-placement-item-location-refs`, `check-static-output-placement` and `check-ut`.

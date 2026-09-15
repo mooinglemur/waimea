@@ -19,6 +19,12 @@ export const HEAP_LIMIT_BYTES = 1536 * 2 ** 20;
 
 export const defaultJobs = (cores) => Math.max(1, Math.min(4, (cores || 2) - 1));
 
+/**
+ * Worker pairs for a paired variant (check-determinism). Each pair is two interpreters, so the plan can halve
+ * the count, rounding down, to limit memory; with fewer than two workers there's nothing to halve.
+ */
+export const pairedJobs = (plan) => (plan.halvePairedJobs && plan.jobs >= 2 ? Math.floor(plan.jobs / 2) : plan.jobs);
+
 /** Sets every variant's run count from a preset. Which variants are enabled is left alone. */
 export function applyPreset(plan, presetId) {
   const preset = PRESETS.find((p) => p.id === presetId);
@@ -35,6 +41,7 @@ export function defaultPlan(cores) {
   return applyPreset({
     unitTests: true,
     jobs: defaultJobs(cores),
+    halvePairedJobs: false,
     variants: VARIANTS.map((v) => ({ name: v.name, enabled: !v.unsupported, runs: 0 })),
     annotations: null,
     metaYaml: null,
@@ -171,7 +178,8 @@ export async function runSession({ manifest, core, apworldBytes, world, plan, sp
       onEvent({ type: "fuzzDone", variant: variant.name, skipped: "stopped before it started" });
       continue;
     }
-    onEvent({ type: "fuzzStart", variant: variant.name, runs: chosen.runs });
+    const jobs = variant.paired ? pairedJobs(plan) : plan.jobs;
+    onEvent({ type: "fuzzStart", variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired) });
     let entry;
     try {
       const result = await runVariant({
@@ -189,16 +197,17 @@ export async function runSession({ manifest, core, apworldBytes, world, plan, sp
         },
         apworld: world.module,
         runs: chosen.runs,
-        jobs: plan.jobs,
+        jobs,
+        paired: Boolean(variant.paired),
         timeoutSeconds: record.timeoutSeconds,
         heapLimitBytes: HEAP_LIMIT_BYTES,
         seed: `${plan.seed}-${variant.name}`,
         signal,
         onProgress: (progress) => onEvent({ type: "fuzzProgress", variant: variant.name, progress }),
       });
-      entry = { variant: variant.name, runs: chosen.runs, result };
+      entry = { variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired), result };
     } catch (err) {
-      entry = { variant: variant.name, runs: chosen.runs, error: err.message };
+      entry = { variant: variant.name, runs: chosen.runs, jobs, paired: Boolean(variant.paired), error: err.message };
     }
     record.fuzz.push(entry);
     onEvent({ type: "fuzzDone", ...entry });

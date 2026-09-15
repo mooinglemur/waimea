@@ -72,11 +72,13 @@ function renderWaimeaNotes(entry, record) {
   const { stats } = entry.result.report;
   const { counters } = entry.result;
   const notes = [`Timeout ${record.timeoutSeconds} s (CI's ${record.ciTimeoutSeconds} s, scaled by calibration)`];
+  if (entry.paired) notes.push(`${entry.jobs} worker pairs, each regenerating its seeds in a second interpreter`);
   if (counters.timeouts) {
     const hidden = counters.timeouts - stats.timeout;
     notes.push(hidden > 0 ? `${counters.timeouts} generations hit it; hooks reported ${hidden} of them as another outcome` : `${counters.timeouts} generations hit it`);
   }
   if (counters.fatal) notes.push(`${counters.fatal} fatal interpreter errors, under "${FATAL_KEY}"`);
+  if (counters.regeneratorFatal) notes.push(`${counters.regeneratorFatal} fatal errors in regenerating workers, reported as the hook's subprocess errors`);
   if (counters.heapRestarts) notes.push(`${counters.heapRestarts} workers restarted for memory`);
   if (entry.result.aborted) notes.push("stopped early");
   return `_${notes.join("; ")}._\n`;
@@ -136,6 +138,8 @@ export function environmentFor({ manifest, record, userAgent, hardwareConcurrenc
     variants: record.fuzz.map((entry) => ({
       variant: entry.variant,
       runs: entry.runs ?? 0,
+      jobs: entry.jobs ?? null,
+      paired: entry.paired ?? false,
       skipped: entry.skipped ?? null,
       error: entry.error ?? null,
       counters: entry.result ? { ...entry.result.counters, bootSeconds: undefined } : null,

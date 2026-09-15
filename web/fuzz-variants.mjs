@@ -1,5 +1,6 @@
 // The index CI's fuzz variants, in its order (Archipelago-index-ci scripts/run_fuzz.py and
 // aggregate_fuzz.py). "full" variants run FUZZ_RUNS_FULL generations in CI, "check" variants FUZZ_RUNS_CHECK.
+// A variant marked unsupported can't run in the browser; one marked paired gives each worker a regenerating partner.
 
 export const CI_RUNS = { full: 5000, check: 500 };
 export const CI_JOBS = 4;
@@ -24,8 +25,9 @@ export const VARIANTS = [
     hook: "hooks.determinism:Hook",
     runs: "check",
     description: "Fuzz to check for determinism",
-    // The hook regenerates each seed in a second Python process, which Pyodide can't start.
-    unsupported: "Needs a second interpreter; not yet supported in the browser",
+    // The hook regenerates each seed in a second Python process. Here that's a second worker per worker,
+    // runtime/waimea_determinism.py stands in for the hook, and the orchestrator carries requests between them.
+    paired: true,
   },
   { name: "check-gerpocalypse", hook: "hooks.gerpocalypse:Hook", runs: "check", description: "Fuzz to check for issues with GER" },
   {

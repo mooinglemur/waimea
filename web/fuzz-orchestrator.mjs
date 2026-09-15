@@ -11,6 +11,11 @@
 // - Fatal errors: a worker whose interpreter fails (often a JavaScript stack overflow) counts a failure
 //   under FATAL_KEY and is replaced. fuzz.py counts a crashed pool worker as a failure too.
 // - Seeds: run i's YAMLs come from random.seed(`${seed}-${i}`), so a run can be reproduced.
+// - Paired workers (check-determinism): natively the hook starts a child process per pool worker and blocks
+//   on it. Here each worker gets a partner running in the "regenerator" role; a run pauses with a regenerate
+//   request, which is passed to the partner, and resumes with its response. The timeout covers both, as
+//   fuzz.py's timer covers after_generate. A partner's fatal error becomes the child's error reply, which the
+//   hook reports as a failure.
 
 export const TIMEOUT_KEY = "<class 'TimeoutError'>";
 export const FATAL_KEY =
@@ -22,7 +27,8 @@ export const FATAL_KEY =
  * @param {object} options.init       the init message for each worker, less its type
  * @param {string} options.apworld    apworld module name, the key fuzz.py's report uses
  * @param {number} options.runs
- * @param {number} options.jobs
+ * @param {number} options.jobs       workers, or worker pairs when paired
+ * @param {boolean} [options.paired]  give each worker a regenerating partner (check-determinism)
  * @param {number} options.timeoutSeconds  0 for none
  * @param {number} options.heapLimitBytes  0 for none
  * @param {string} options.seed
@@ -33,12 +39,12 @@ export const FATAL_KEY =
  *   durations: {i: number, outcome: string, seconds: number}[]}>}  durations: generation time of each run
  *   that finished in its worker (not timeouts or fatal errors)
  */
-export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, heapLimitBytes, seed, generationSeed, onProgress = () => {}, signal }) {
+export function runVariant({ spawn, init, apworld, runs, jobs, paired = false, timeoutSeconds, heapLimitBytes, seed, generationSeed, onProgress = () => {}, signal }) {
   return new Promise((resolve, reject) => {
     const stats = { success: 0, failure: 0, timeout: 0, ignored: 0 };
     const errors = {};
     const files = {};
-    const counters = { restarts: 0, heapRestarts: 0, timeouts: 0, fatal: 0, bootSeconds: [] };
+    const counters = { restarts: 0, heapRestarts: 0, timeouts: 0, fatal: 0, regeneratorFatal: 0, bootSeconds: [] };
     const durations = [];
     const slots = [];
     let next = 0;
@@ -46,14 +52,18 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
     let finished = false;
     let game = null;
 
+    const stopSlot = (slot) => {
+      clearTimeout(slot.timer);
+      slot.worker?.terminate();
+      slot.worker = null;
+      slot.partner?.worker?.terminate();
+      if (slot.partner) slot.partner.worker = null;
+    };
+
     const finish = (error) => {
       if (finished) return;
       finished = true;
-      for (const slot of slots) {
-        clearTimeout(slot.timer);
-        slot.worker?.terminate();
-        slot.worker = null;
-      }
+      for (const slot of slots) stopSlot(slot);
       if (error) {
         reject(error);
         return;
@@ -87,23 +97,44 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
       worker.post({ type: "init", ...init });
     }
 
+    function startPartner(slot) {
+      const partner = slot.partner;
+      const worker = spawn({
+        onMessage: (message) => partner.worker === worker && onPartnerMessage(slot, message),
+        onError: (text) => partner.worker === worker && onPartnerCrash(slot, text),
+      });
+      partner.worker = worker;
+      partner.state = "booting";
+      worker.post({ type: "init", ...init, role: "regenerator" });
+    }
+
     function replace(slot) {
       clearTimeout(slot.timer);
       slot.worker?.terminate();
       slot.worker = null;
       counters.restarts++;
+      // A partner regenerating for the lost run is as good as lost too.
+      if (slot.partner?.state === "busy") replacePartner(slot);
       if (!finished) start(slot);
     }
 
+    function replacePartner(slot) {
+      slot.partner.worker?.terminate();
+      slot.partner.worker = null;
+      counters.restarts++;
+      if (!finished) startPartner(slot);
+    }
+
+    // Starts the next run once the worker, and its partner if paired, are both idle.
     function dispatch(slot) {
-      if (finished) return;
+      if (finished || slot.state !== "idle") return;
       if (signal?.aborted || next >= runs) {
-        slot.worker?.terminate();
-        slot.worker = null;
+        stopSlot(slot);
         slot.state = "done";
         if (slots.every((s) => s.state === "done")) finish();
         return;
       }
+      if (slot.partner && slot.partner.state !== "idle") return;
       slot.i = next++;
       slot.yamls = null;
       slot.state = "preparing";
@@ -123,7 +154,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
         finish(new Error(`A fuzz worker failed while starting:\n${text}`));
         return;
       }
-      if (slot.state === "preparing" || slot.state === "generating") {
+      if (slot.state === "preparing" || slot.state === "generating" || slot.state === "regenerating") {
         counters.fatal++;
         addError(FATAL_KEY, slot.i);
         addDump("error", slot.i, { ...(slot.yamls ?? {}), [`${slot.i}.log`]: text });
@@ -142,6 +173,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
             slot.state = "reclassifying";
             slot.worker.post({ type: "timeoutOutcome" });
           } else {
+            slot.state = "idle";
             dispatch(slot);
           }
           break;
@@ -149,6 +181,15 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
           slot.yamls = message.yamls;
           slot.state = "generating";
           if (timeoutSeconds > 0) slot.timer = setTimeout(() => onTimeout(slot), timeoutSeconds * 1000);
+          break;
+        case "regenerate":
+          if (!slot.partner) {
+            onCrash(slot, "A hook asked for a regenerating worker, but this variant has none");
+            break;
+          }
+          slot.state = "regenerating";
+          slot.partner.state = "busy";
+          slot.partner.worker.post({ type: "regenerate", request: message.request });
           break;
         case "result":
           clearTimeout(slot.timer);
@@ -160,6 +201,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
             counters.heapRestarts++;
             replace(slot);
           } else {
+            slot.state = "idle";
             dispatch(slot);
           }
           break;
@@ -176,6 +218,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
           if (outcome === "timeout") addError(TIMEOUT_KEY, i);
           else if (outcome === "failure") addError("None", i);
           record(outcome);
+          slot.state = "idle";
           dispatch(slot);
           break;
         }
@@ -192,12 +235,57 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
       }
     }
 
+    // Hands a partner's response back to its worker, if that worker is still waiting for it.
+    function answer(slot, response) {
+      if (slot.state !== "regenerating") return;
+      slot.state = "generating";
+      slot.worker.post({ type: "resume", response });
+    }
+
+    function onPartnerCrash(slot, text) {
+      if (finished) return;
+      const partner = slot.partner;
+      if (partner.state === "booting") {
+        finish(new Error(`A regenerating worker failed while starting:\n${text}`));
+        return;
+      }
+      if (partner.state === "busy") {
+        counters.regeneratorFatal++;
+        answer(slot, { status: "error", text: `Fatal error in the regenerating worker's Python interpreter:\n${text}` });
+      }
+      replacePartner(slot);
+    }
+
+    function onPartnerMessage(slot, message) {
+      if (finished) return;
+      const partner = slot.partner;
+      switch (message.type) {
+        case "ready":
+          counters.bootSeconds.push(+message.seconds.toFixed(2));
+          partner.state = "idle";
+          dispatch(slot);
+          break;
+        case "regenerated":
+          partner.state = "idle";
+          answer(slot, message.response);
+          if (heapLimitBytes > 0 && message.heapBytes > heapLimitBytes) {
+            counters.heapRestarts++;
+            replacePartner(slot);
+          }
+          break;
+        case "fatal":
+          onPartnerCrash(slot, message.text);
+          break;
+        case "setupError":
+          finish(new Error(`Regenerating worker setup failed:\n${message.text}`));
+          break;
+      }
+    }
+
     signal?.addEventListener("abort", () => {
       for (const slot of slots) {
         if (slot.state !== "done") {
-          clearTimeout(slot.timer);
-          slot.worker?.terminate();
-          slot.worker = null;
+          stopSlot(slot);
           slot.state = "done";
         }
       }
@@ -209,9 +297,10 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
       return;
     }
     for (let j = 0; j < Math.min(jobs, runs); j++) {
-      const slot = { worker: null, state: "idle", i: null, yamls: null, timer: null, pendingTimeout: null };
+      const slot = { worker: null, state: "idle", i: null, yamls: null, timer: null, pendingTimeout: null, partner: paired ? { worker: null, state: "idle" } : null };
       slots.push(slot);
       start(slot);
+      if (slot.partner) startPartner(slot);
     }
   });
 }

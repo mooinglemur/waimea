@@ -33,8 +33,8 @@ builds on the lobby's `ap-worker` image.
 
 | Job | Runs | Waimea |
 |---|---|---|
-| `unit-tests` | the lobby's `ap_tests.py`: the `WorldTestBase` battery plus `test/general` discovery, in one process | Planned |
-| `fuzz` (11-variant matrix) | `run_fuzz.py`, which runs the fuzzer's `fuzz.py` with `-j 4 -t 30` | Planned, except the determinism variant at first |
+| `unit-tests` | the lobby's `ap_tests.py`: the `WorldTestBase` battery plus `test/general` discovery, in one process | Built |
+| `fuzz` (11-variant matrix) | `run_fuzz.py`, which runs the fuzzer's `fuzz.py` with `-j 4 -t 30` | Built, all 11 variants |
 | `check` | `self_check.py`, which builds the options template and validates it with the lobby's `checker.YamlChecker` | Later, if worthwhile |
 | `network-audit` | `min_generate.py` under a socket monkeypatch | Not needed; see Security |
 
@@ -90,7 +90,9 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    - optional file pickers for an expectation-annotations TOML and a fuzz-meta YAML. By default neither is
      used, so every test is expected to pass.
 
-   The determinism variant is listed as not yet supported.
+   The determinism variant runs two interpreters per worker (see Hooks), so its row has a **Use half the
+   workers** checkbox, off by default. It halves the pair count, rounding down, for that variant only, and is
+   disabled and unchecked below two workers.
 3. **Start** runs the unit tests, then each fuzz variant in turn. Each section shows:
    - a colored dot, green or red, or a spinner while running;
    - passed/total or failed/total.
@@ -155,7 +157,8 @@ The `unittest-report` and `fuzz-report` trees are what the CI's `aggregate_unitt
 - **Headers.**
   - The page's policy allows scripts only from Waimea and denies other connections.
   - Workers get a policy that allows no network at all.
-  - COOP/COEP are added only if the determinism check ends up needing `SharedArrayBuffer`.
+  - No COOP/COEP: the determinism check pairs workers through the orchestrator, so it doesn't need
+    `SharedArrayBuffer`.
 
 ### Orchestrator and workers
 
@@ -222,7 +225,8 @@ sends the same messages.
   - a `setup_worker` failure stops the variant with that error, where natively every run fails;
   - a fatal interpreter error counts a failure under its own descriptive key, where a crashed pool worker
     counts one under `"None"`;
-  - a worker is restarted when its heap passes the limit.
+  - a worker is restarted when its heap passes the limit;
+  - a paired variant's regenerations go through the orchestrator (see Hooks).
 
 ### Fuzz timeout calibration
 
@@ -315,15 +319,34 @@ What `ap_tests.py` itself does:
   hooks are in-process Python.
 - `check-ut` uses UT 0.2.26, matching the CI image. Kalapana pins 0.3.3. When CI re-pins UT, Waimea
   follows.
-- **Determinism** starts `sys.executable hooks/determinism.py <ap_path>` in `setup_worker`. After each
-  generation it pickles the run's `args` over a pipe, waits while the child regenerates the same seed, and
-  compares serialized multiworld states. The separate interpreter is the point: it catches differences from
-  import order and hash randomization. Each Pyodide instance randomizes string hashes differently, so a
-  second worker keeps that value. There are two designs:
-  - a second worker, with `SharedArrayBuffer` and `Atomics.wait` for the blocking wait, which needs COOP and
-    COEP headers; or
-  - moving the comparison into the orchestrator: worker A generates and serializes, worker B regenerates,
-    and the orchestrator compares. This changes the hook's shape.
+- **Determinism, natively.** The hook starts `sys.executable hooks/determinism.py <ap_path>` in
+  `setup_worker`, one long-lived child per pool worker. In `after_generate` it pickles the run's `args` over a
+  pipe, blocks while the child regenerates the same seed, and compares serialized multiworld states. A
+  difference, or an error in the child, is a failure; other generation failures become ignored. `fuzz.py`'s
+  timer covers `after_generate`, so the timeout spans both generations. CI doesn't set `PYTHONHASHSEED`, so
+  the child's string hashes differ from its parent's: that, and import order, are what the check catches.
+- **Determinism, in Waimea.** A worker can't start a process or block on another worker, so the variant is
+  marked `paired` and the orchestrator gives each fuzz worker a partner in the "regenerator" role:
+  1. `runtime/fuzz_worker.py` runs the generation as a Python generator. `runtime/waimea_determinism.py`,
+     substituted for `hooks.determinism:Hook`, serializes the multiworld in `after_generate`, and the
+     generation pauses at that point with a request: the pickled `args` and the run's YAMLs.
+  2. The partner (`runtime/determinism_regenerator.py`, the hook's `worker_main` loop) writes the YAMLs at
+     the same path, regenerates, serializes, clears ABC caches, and replies `ok` with the state or `error`
+     with the traceback and captured stderr.
+  3. The fuzz worker resumes, compares, and classifies with the pinned hook's own functions and messages.
+
+  Each Pyodide instance randomizes string hashes differently, so the partner keeps the check's value. The
+  orchestrator's timeout runs through the regeneration; a timeout replaces both workers of the pair. A
+  partner's fatal error is answered as the child's `error` reply, which the hook reports as a failure. A pair
+  is two interpreters but only one is busy at a time, so CPU use is as for other variants and memory about
+  doubles; the page's **Use half the workers** option trades speed for memory.
+
+  **Checked** (2026-09-15; Node runs in `spikes/03-fuzz/`, the page in `spikes/06-page/`):
+  - `fixtures/waimea_nondeterministic` (`spikes/04-browser-fuzz/`), which builds its item pool from a set of
+    strings, failed 6 of 6 runs with "Itempool: Same items but different order" in Node, Chrome, Firefox and
+    native `fuzz.py`;
+  - TUNIC passed 12 of 12 in Node and natively, and APQuest 20 of 20 in Node;
+  - with a 1-second timeout, TUNIC runs timed out mid-regeneration and the pairs were replaced.
 
 ### Self-check
 
@@ -391,7 +414,8 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
      worker.
 
    Still to check: meta YAMLs, `--dump-ignored` and YAML-count ranges.
-4. **Hook variants.** The in-process hooks, then the determinism design.
+4. **Hook variants.** Built: the in-process hooks, then the determinism check with paired workers (see
+   Hooks).
 5. **Web app, server and image.**
    - **Built.** The server, image, CI and page shell.
      - The server serves the page, the Pyodide runtime, a content-hashed core bundle and a manifest, with
@@ -426,8 +450,6 @@ that needs native executables.
 
 1. **Coverage.** Kalapana showed 449 of 507 index worlds import under Pyodide, but that doesn't show how
    many generate.
-2. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
-   orchestrator.
-3. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
+2. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
    Librarian under `check-collect-accessibility`, Waimea reported 6 ignored runs, all timeouts, where
    native reported 1. The report should count timeouts separately from what hooks reclassify them to.

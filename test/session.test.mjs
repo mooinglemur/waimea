@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CI_RUNS, VARIANTS } from "../web/fuzz-variants.mjs";
-import { DEFAULT_PRESET, PRESETS, applyPreset, defaultJobs, defaultPlan } from "../web/session.mjs";
+import { DEFAULT_PRESET, PRESETS, applyPreset, defaultJobs, defaultPlan, pairedJobs } from "../web/session.mjs";
 
 const runsOf = (plan, name) => plan.variants.find((v) => v.name === name).runs;
 
@@ -20,7 +20,18 @@ test("every variant is enabled by default except unsupported ones", () => {
   for (const variant of VARIANTS) {
     assert.equal(plan.variants.find((v) => v.name === variant.name).enabled, !variant.unsupported, variant.name);
   }
-  assert.equal(plan.variants.find((v) => v.name === "check-determinism").enabled, false);
+  assert.equal(plan.variants.find((v) => v.name === "check-determinism").enabled, true);
+});
+
+test("paired variants use every worker as a pair unless halved, rounding down, from two workers up", () => {
+  assert.equal(VARIANTS.find((v) => v.name === "check-determinism").paired, true);
+  const plan = defaultPlan(8);
+  assert.equal(plan.halvePairedJobs, false);
+  assert.equal(pairedJobs({ jobs: 4, halvePairedJobs: false }), 4);
+  assert.equal(pairedJobs({ jobs: 4, halvePairedJobs: true }), 2);
+  assert.equal(pairedJobs({ jobs: 3, halvePairedJobs: true }), 1);
+  assert.equal(pairedJobs({ jobs: 2, halvePairedJobs: true }), 1);
+  assert.equal(pairedJobs({ jobs: 1, halvePairedJobs: true }), 1);
 });
 
 test("the Quick preset sets a tenth of CI's counts, and CI restores them, without touching selections", () => {

@@ -82,6 +82,7 @@ const result = await runVariant({
   apworld: module,
   runs,
   jobs,
+  paired: Boolean(variant.paired),
   timeoutSeconds,
   heapLimitBytes: Number(opts["heap-limit-mib"]) * 2 ** 20,
   seed: opts.seed,

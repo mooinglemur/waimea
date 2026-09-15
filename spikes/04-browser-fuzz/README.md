@@ -86,6 +86,10 @@ static files.
 - `fixtures/waimea_netprobe/`: a minimal world whose `generate_early` tries same-origin and
   cross-origin requests through Pyodide's `js` module, then fails with the results. Natively it fails
   with "no js module".
+- `fixtures/waimea_nondeterministic/`: a minimal world that builds its item pool by iterating over a set of
+  strings, so generation depends on string hash randomization. `check-determinism` fails it in every
+  runtime, since its paired interpreter hashes differently. It isn't a real game, and fails
+  `test_implemented`'s completion-condition test.
 - `csp-probe.mjs <chrome|firefox> <server port> <waimea_netprobe.apworld>`: runs that fixture once
   against a running `server/main.mjs`, with a listener on 127.0.0.1:8236 as the cross-origin target.
   - Node's worker threads don't overflow at this depth either; they raise `RecursionError` as Firefox

@@ -28,6 +28,8 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `waimea_boot.py` prepares the interpreter;
   - `unit_tests.py` runs an apworld's unit tests as CI does;
   - `fuzz_worker.py` runs fuzz generations for the orchestrator;
+  - `waimea_determinism.py` stands in for the determinism hook, and `determinism_regenerator.py` runs in the
+    paired worker that regenerates each seed;
   - `apworld_info.py` describes an uploaded apworld (module, manifest, games);
   - the rest are stand-ins for modules Pyodide lacks (some adapted from Kalapana).
 - `web/`: the page and its modules.
@@ -37,7 +39,8 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `session.mjs` runs a whole session (inspection, unit tests, calibration, fuzz variants) as a stream of
     events.
   - `test-worker.mjs` and `fuzz-worker.mjs` are the two worker types.
-  - `fuzz-orchestrator.mjs` schedules a variant's generations across workers.
+  - `fuzz-orchestrator.mjs` schedules a variant's generations across workers, pairing them for the
+    determinism check.
   - `fuzz-variants.mjs` is CI's variant table.
   - `report.mjs` and `zip.mjs` build the downloadable report.
 - `build/`: builds `core.zip`, the Archipelago runtime each worker unpacks, in CI's image layout.

@@ -74,11 +74,13 @@ export class FuzzVariantView {
 
     this.body.append(h("p", {}, statsLine(stats)));
     const notes = [];
+    if (entry.paired) notes.push(`Ran on ${entry.jobs} worker ${entry.jobs === 1 ? "pair" : "pairs"}: a second interpreter regenerated each worker's seeds for comparison.`);
     if (counters.timeouts) {
       const hidden = counters.timeouts - stats.timeout;
       notes.push(`${counters.timeouts} generations reached the ${timeoutSeconds} s timeout${hidden > 0 ? `; the hook reported ${hidden} of them as another outcome` : ""}.`);
     }
     if (counters.fatal) notes.push(`${counters.fatal} runs crashed the browser's Python interpreter (often a JavaScript stack overflow); these may pass natively.`);
+    if (counters.regeneratorFatal) notes.push(`${counters.regeneratorFatal} regenerations crashed the second interpreter; the hook reports these as failed subprocess generations.`);
     if (counters.heapRestarts) notes.push(`${counters.heapRestarts} workers were restarted to free memory.`);
     for (const note of notes) this.body.append(h("p", { class: "hint" }, note));
 

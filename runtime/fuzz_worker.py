@@ -28,13 +28,17 @@ _state = {}
 _randint = random.randint
 
 
+# Hooks whose native form can't run in Pyodide, and the stand-ins that run in their place.
+_SUBSTITUTE_HOOKS = {"hooks.determinism:Hook": "waimea_determinism:Hook"}
+
+
 def _find_hook(hook_path):
     """fuzz.find_hook without its subclass check, which is inverted: it raises when the hook *is* a
     BaseHook subclass. Natively the check never fires, because fuzz.py runs as __main__ while hooks import
     a second copy of it as `fuzz`, so the two BaseHook classes differ. Here fuzz.py is imported once."""
     import importlib
 
-    module_path, object_path = hook_path.split(":")
+    module_path, object_path = _SUBSTITUTE_HOOKS.get(hook_path, hook_path).split(":")
     obj = importlib.import_module(module_path)
     for inner in object_path.split("."):
         obj = getattr(obj, inner)
@@ -181,11 +185,32 @@ def _finish(i, yamls_dir, outcome, raised, out_buf):
 
 def generate(generation_seed=None):
     """Generates the prepared run as gen_wrapper does, without its timer. Returns the outcome record,
-    with the seconds call_generate took.
+    with the seconds call_generate took, or {"regenerate": request} when a hook needs the run regenerated
+    in the paired worker first; resume() then continues with that worker's response.
 
     generation_seed pins the seed call_generate otherwise draws at random, so a calibration run does the
     same work in every runtime.
     """
+    _state["generation"] = _generation(generation_seed)
+    return _advance(None)
+
+
+def resume(response_json):
+    """Continues a generation paused for regeneration, with the paired worker's response."""
+    return _advance(json.loads(response_json))
+
+
+def _advance(response):
+    try:
+        request = _state["generation"].send(response)
+    except StopIteration as done:
+        del _state["generation"]
+        return json.dumps(done.value)
+    return json.dumps({"regenerate": request})
+
+
+def _generation(generation_seed):
+    """generate()'s body, as a generator that yields each regeneration request and receives its response."""
     fuzz = _state["fuzz"]
     args = _state["args"]
     from Options import OptionError
@@ -213,6 +238,13 @@ def generate(generation_seed=None):
                 try:
                     for hook in fuzz.MP_HOOKS:
                         hook.after_generate(mw, output_path)
+                        # Natively the determinism hook blocks inside after_generate while its child process
+                        # regenerates. Here the generation pauses at the same point, with the timeout running.
+                        request = getattr(hook, "regeneration_request", None)
+                        request = request() if request else None
+                        if request is not None:
+                            response = yield {**request, "yamls": _read_dir(yamls_dir)}
+                            hook.complete_regeneration(response)
                 finally:
                     fuzz.clear_abc_caches()
 
@@ -246,7 +278,7 @@ def generate(generation_seed=None):
         result = {"outcome": "failure", "key": "None", "dump": {"kind": "error", "files": {**_read_dir(yamls_dir), f"{i}.log": log}}}
     shutil.rmtree(yamls_dir, ignore_errors=True)
     result["seconds"] = seconds
-    return json.dumps(result)
+    return result
 
 
 def timeout_outcome():

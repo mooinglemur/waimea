@@ -1,0 +1,234 @@
+/* Waimea's stylesheet, following Kalapana's and puna's: hand-written, one palette through light-dark()
+ * tokens, and `color-scheme` on the root deciding the theme (see theme.js). */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#fbfbfa, #16181c);
+  --surface: light-dark(#ffffff, #1e2127);
+  --border: light-dark(#d9d9d6, #333842);
+  --text: light-dark(#1b1c1e, #e6e7ea);
+  --muted: light-dark(#5f6570, #969ca8);
+  --link: light-dark(#1a5fb4, #7cb0f0);
+  --accent: light-dark(#1a5fb4, #7cb0f0);
+  --warn-fg: light-dark(#7a4c00, #f0c86a);
+  --warn-bg: light-dark(#fdf3dd, #33280f);
+  --err-fg: light-dark(#a01b1b, #f29090);
+  --err-bg: light-dark(#fdeaea, #3a1d1d);
+  --pass: light-dark(#1a7f37, #4cc264);
+  --fail: light-dark(#c02626, #f2696e);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 6px;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Author `display` rules would otherwise beat the UA's [hidden] rule. */
+[hidden] { display: none !important; }
+
+a { color: var(--link); }
+a:hover { text-decoration: none; }
+
+/* --- the shell --- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.topbar nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-left: auto;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.tagline { color: var(--muted); font-size: 0.9rem; }
+
+/* --- the theme selector, revealed by theme.js --- */
+
+.theme { display: none; }
+
+.js-theme .theme {
+  display: inline-flex;
+  align-self: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.theme button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.4rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: calc(var(--radius) - 3px);
+  cursor: pointer;
+}
+
+.theme button:hover { color: var(--text); }
+.theme button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+:root:not([data-theme]) .theme button[data-set="system"],
+:root[data-theme="light"] .theme button[data-set="light"],
+:root[data-theme="dark"] .theme button[data-set="dark"] {
+  color: var(--text);
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Flex items don't collapse margins, so one gap from the container spaces everything. */
+main > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+footer {
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 1rem 1rem;
+}
+
+.version { color: var(--muted); font-size: 0.85rem; }
+
+.intro { color: var(--muted); }
+
+/* --- forms --- */
+
+label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+button {
+  font: inherit;
+  padding: 0.4rem 0.9rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover { border-color: var(--muted); }
+button:disabled, input:disabled { opacity: 0.6; cursor: default; }
+
+.choose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- the status line and its state marker --- */
+
+.notice {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.status {
+  display: flex;
+  align-items: baseline;
+}
+
+/* A second signal beside the words, never the only one (aria-hidden in the markup): a dot that is green
+   for pass, red for fail, and a spinner while running. */
+.state {
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  background: var(--muted);
+}
+
+.state.pass { background: var(--pass); }
+.state.fail { background: var(--fail); }
+
+.state.running {
+  background: none;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

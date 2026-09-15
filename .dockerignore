@@ -1,0 +1,10 @@
+.git
+.claude
+vendor
+build/out
+data
+spikes
+docs
+test
+**/node_modules
+**/__pycache__

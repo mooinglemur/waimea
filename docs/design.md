@@ -330,6 +330,9 @@ which would need stubs, and it needs AP's `data/options.yaml` template and `jinj
 - **Worker isolation.** World code runs only in Web Workers, whose policy allows no network. That replaces
   `unshare -rn` and the network audit. A worker can't reach the page's DOM or localStorage. Kalapana's
   `workerPolicy` shows the pattern.
+- **Verified in Chrome and Firefox.** A probe apworld running under `server/main.mjs`'s worker policy
+  could fetch Waimea's own `/healthz`, but its cross-origin request was blocked before leaving the browser
+  (`spikes/04-browser-fuzz/`, "The worker security policy").
 - **Server.** The server never receives or imports an apworld.
 - **Results.** Results can be forged, which is why Waimea is self-service only.
 
@@ -385,6 +388,12 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
    Still to check: meta YAMLs, `--dump-ignored` and YAML-count ranges.
 4. **Hook variants.** The in-process hooks, then the determinism design.
 5. **Web app, server and image.**
+   - **Built.** The server, image, CI and page shell.
+     - The server serves the page, the Pyodide runtime, a content-hashed core bundle and a manifest, with
+       separate page and worker security policies.
+     - The image builds reproducibly (the same core bundle hash as a local build) and runs as an
+       unprivileged user.
+   - **To do.** The test runner UI: picker, test list, progress, details, summary and report.
 6. **Self-check**, if it proves worthwhile.
 
 Out of scope: replacing the index CI, posting results to GitHub or apdiff-viewer, game clients, and anything

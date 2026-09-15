@@ -39,6 +39,25 @@ Runs the fuzz driver in real browsers, with the same modules the site will serve
 This checks what the Node spike couldn't: behavior in Chrome's and Firefox's workers, and a fatal
 interpreter error during fuzzing.
 
+## The worker security policy
+
+The real server (`server/main.mjs`) gives worker scripts `default-src 'none'; script-src 'self'
+'wasm-unsafe-eval'; connect-src 'self'`. To check that it holds against apworld code, `csp-probe.mjs`
+loads the real page and runs one generation of the `waimea_netprobe` fixture through
+`/fuzz-orchestrator.mjs` and `/fuzz-worker.mjs`. The fixture's `generate_early` makes blocking
+`XMLHttpRequest`s, then fails with a message saying what they did:
+- one to the worker's own origin (`/healthz`);
+- one to a listener on another local port, which logs every request it receives.
+
+| Browser | Same-origin `/healthz` | Cross-origin listener |
+|---|---|---|
+| Chrome | status 200 | blocked: "NetworkError: Failed to execute 'send' on 'XMLHttpRequest'" |
+| Firefox | status 200 | blocked: "NetworkError: A network error occurred." |
+
+The listener logged no request from either browser, only the script's own readiness check. So a blocked
+request never leaves the browser. Apworld code can still reach Waimea's own origin, which serves only
+static files.
+
 ## Files
 
 - `serve.mjs <data dir> [port]` (default port 8234) serves the page and these folders:
@@ -64,6 +83,11 @@ interpreter error during fuzzing.
   `__call__`. Natively, and in Firefox workers, it fails with `RecursionError` at Python's default limit.
   In a Chrome worker it overflows the JavaScript stack at about 450 levels, a fatal interpreter error, so
   it exercises Waimea's fatal-error handling. It isn't a real game.
+- `fixtures/waimea_netprobe/`: a minimal world whose `generate_early` tries same-origin and
+  cross-origin requests through Pyodide's `js` module, then fails with the results. Natively it fails
+  with "no js module".
+- `csp-probe.mjs <chrome|firefox> <server port> <waimea_netprobe.apworld>`: runs that fixture once
+  against a running `server/main.mjs`, with a listener on 127.0.0.1:8236 as the cross-origin target.
   - Node's worker threads don't overflow at this depth either; they raise `RecursionError` as Firefox
     does. Spike 1's overflow at about 900 levels was on Node's main thread. So only Chrome exercises the
     fatal path.

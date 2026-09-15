@@ -43,7 +43,39 @@ Planning. The feasibility spike is done, and nothing else is built yet.
 ```sh
 node deploy/fetch-inputs.mjs vendor        # pinned inputs into vendor/; needs tar and bzip2
 node build/build-core.mjs vendor build/out  # core.zip, the runtime each worker unpacks
+node server/main.mjs                        # http://localhost:8080
+node --test 'test/*.test.mjs'
+docker build -f deploy/Dockerfile -t waimea .
 ```
+
+## Server
+
+`server/` has no npm dependencies and never receives or runs an apworld. It serves:
+
+| Route | Notes |
+|---|---|
+| `/` and `web/` | The page. `no-cache` with ETags. |
+| `/manifest.json` | Pinned versions, the Pyodide and core bundle URLs, and the timeout calibration. |
+| `/runtime/pyodide-<version>/*` | The Pyodide runtime. Immutable. |
+| `/bundles/core-<sha256>.zip` | The core bundle, named by content. Immutable. |
+| `/healthz` | Liveness. |
+| `/readyz` | 200 once a core bundle loaded. |
+
+Security headers:
+- **The page** gets a Content Security Policy allowing scripts, workers and connections only from Waimea.
+- **Worker scripts**, which run apworld code, get their own policy: nothing but Waimea's scripts and
+  fetches, plus WebAssembly compilation.
+- **Every response** gets `nosniff`, `no-referrer` and `Cross-Origin-Resource-Policy: same-origin`.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WAIMEA_PORT` / `WAIMEA_HOST` | `8080` / `::` | Listen address. A non-integer port, such as the `tcp://...` value Kubernetes injects for a Service named `waimea`, is ignored with a warning. |
+| `WAIMEA_VENDOR_DIR` | `vendor/` | Pinned inputs; the server reads `inputs.json` and `pyodide/`. |
+| `WAIMEA_CORE_BUNDLE` | `build/out/core.zip` | The core bundle. |
+| `WAIMEA_CALIBRATION` | `deploy/calibration.json` | The fuzz timeout calibration reference. |
+
+The image (`deploy/Dockerfile`) fetches and verifies the inputs, builds the core bundle under Pyodide, and
+keeps only Pyodide, the bundle, the server and the page.
 
 ## License
 

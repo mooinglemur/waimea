@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Waimea</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="app.css">
+  <script src="theme.js"></script>
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Waimea</a>
+    <span class="tagline">Archipelago apworld tests in your browser</span>
+    <nav>
+      <div class="theme" role="group" aria-label="Color theme" data-theme-toggle>
+        <button type="button" data-set="light" aria-pressed="false" title="Light theme" aria-label="Use the light theme">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+            <circle cx="8" cy="8" r="3.1" fill="none" stroke="currentColor"/>
+            <path d="M8 .9v1.9M8 13.2v1.9M.9 8h1.9M13.2 8h1.9M2.98 2.98 4.3 4.3M11.7 11.7l1.32 1.32M13.02 2.98 11.7 4.3M4.3 11.7l-1.32 1.32" fill="none" stroke="currentColor" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button type="button" data-set="dark" aria-pressed="false" title="Dark theme" aria-label="Use the dark theme">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+            <path d="M13.6 10.2A5.9 5.9 0 0 1 5.8 2.4a5.9 5.9 0 1 0 7.8 7.8z" fill="none" stroke="currentColor" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" data-set="system" aria-pressed="false" title="Follow the system theme" aria-label="Follow the system theme">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+            <rect x="1.4" y="2.4" width="13.2" height="9" rx="1.4" fill="none" stroke="currentColor"/>
+            <path d="M5.4 14h5.2M8 11.4V14" fill="none" stroke="currentColor" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <p class="intro">
+      Run an apworld's unit tests and generation fuzzing the way the Archipelago index CI does. Everything
+      runs here in your browser; your apworld isn't uploaded anywhere.
+    </p>
+
+    <form id="choose" class="choose" autocomplete="off">
+      <label>Apworld <input id="apworld" type="file" accept=".apworld" disabled></label>
+    </form>
+
+    <p id="status" class="notice status" role="status">
+      <span id="state" class="state" aria-hidden="true"></span>
+      <span id="message">Loading&hellip;</span>
+    </p>
+  </main>
+
+  <footer><span id="version" class="version">waimea</span></footer>
+</body>
+</html>

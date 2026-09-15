@@ -376,7 +376,13 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
    - timeouts and heap restarts work;
    - CI's `aggregate_fuzz.py` renders identical output.
 
-   Still to check: generation failures, fatal errors, meta YAMLs, and browser workers.
+   Since then, also checked:
+   - generation failures, including one real bug reproduced by both runtimes (`spikes/03-fuzz/`);
+   - browser workers in Chrome and Firefox (`spikes/04-browser-fuzz/`);
+   - a fatal interpreter error, which Chrome records as a failure and recovers from by replacing the
+     worker.
+
+   Still to check: meta YAMLs, `--dump-ignored` and YAML-count ranges.
 4. **Hook variants.** The in-process hooks, then the determinism design.
 5. **Web app, server and image.**
 6. **Self-check**, if it proves worthwhile.

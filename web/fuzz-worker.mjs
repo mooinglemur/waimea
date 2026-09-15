@@ -15,7 +15,12 @@ let py = null;
 let fuzzWorker = null;
 
 const post = (message) => globalThis.postMessage(message);
-const describe = (err) => String(err?.stack ?? err).slice(-4000);
+// A stack overflow's trace runs to thousands of wasm frames, and the useful line ("RangeError: Maximum call
+// stack size exceeded") comes first, so a long description keeps its head as well as its tail.
+const describe = (err) => {
+  const text = String(err?.stack ?? err);
+  return text.length <= 4000 ? text : `${text.slice(0, 2000)}\n[...]\n${text.slice(-2000)}`;
+};
 
 async function init({ pyodideUrl, indexURL, core, apworld, config, packages = ["pyyaml", "orjson", "jinja2"] }) {
   const started = performance.now();

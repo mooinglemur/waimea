@@ -101,7 +101,9 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    - **Unit tests:** the `WorldTestBase` battery, then each `test/general` module, then each test with its
      traceback. Subtests are folded into their test.
    - **Fuzz variants:** failure classes with counts, then example tracebacks, then the YAMLs that caused
-     them.
+     them. A class is the message's first line, since hooks that name what differed, as the determinism
+     check does, would otherwise give nearly every run its own class. The example message and each run's log
+     keep the detail. `report.json` still holds CI's full keys.
 4. Unit-test failures don't stop the fuzz variants. **Stop** ends the run cleanly and still offers a
    partial report. Leaving the page mid-run asks for confirmation.
 5. When everything finishes, the page shows a summary and a link to save the full report.

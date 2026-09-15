@@ -85,15 +85,29 @@ export class FuzzVariantView {
     for (const note of notes) this.body.append(h("p", { class: "hint" }, note));
 
     const worldErrors = Object.values(report.errors)[0] ?? {};
-    const classes = Object.entries(worldErrors).sort((a, b) => b[1].length - a[1].length);
-    for (const [key, runs] of classes) {
+    // report.json keys hold the whole message, so hooks that name what differed (determinism lists items and
+    // locations) give nearly every run its own key. Group by the first line, which is the error itself, and
+    // show one message as an example; each run's log has its own.
+    const classes = new Map();
+    for (const [key, runs] of Object.entries(worldErrors)) {
+      const name = key.split("\n")[0].slice(0, 160);
+      const group = classes.get(name) ?? { runs: [], example: key, keys: 0 };
+      group.runs.push(...runs);
+      group.keys++;
+      classes.set(name, group);
+    }
+    for (const [name, group] of [...classes].sort((a, b) => b[1].runs.length - a[1].runs.length)) {
+      const runs = group.runs.sort((a, b) => a - b);
       const list = h("div", { class: "runs" });
       const errorClass = h(
         "details",
         { class: "group has-failures" },
-        h("summary", {}, dot("fail"), h("span", { class: "title error-key" }, key.split("\n")[0].slice(0, 160)), h("span", { class: "counts" }, `×${runs.length}`)),
-        key.includes("\n") ? h("pre", { class: "log" }, key) : null,
-        key === "None"
+        h("summary", {}, dot("fail"), h("span", { class: "title error-key" }, name), h("span", { class: "counts" }, `×${runs.length}`)),
+        group.example.includes("\n") ? h("pre", { class: "log" }, group.example) : null,
+        group.keys > 1
+          ? h("p", { class: "hint" }, `${group.keys} different messages; the one above is an example, and each run's log has its own.`)
+          : null,
+        name === "None"
           ? h("p", { class: "hint" }, "Marked failed without an exception: the hook or the fuzzer recorded a failure with no error to name, as Universal Tracker's check does. Each run's log says why.")
           : null,
         list,

@@ -24,9 +24,14 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - Pyodide and pure-Python wheels.
 
   Each is verified by sha256.
-- `runtime/`: Python that runs inside Pyodide. `waimea_boot.py` prepares the interpreter,
-  `unit_tests.py` runs an apworld's unit tests as CI does, and the rest are stand-ins for modules Pyodide
-  lacks (some adapted from Kalapana).
+- `runtime/`: Python that runs inside Pyodide:
+  - `waimea_boot.py` prepares the interpreter;
+  - `unit_tests.py` runs an apworld's unit tests as CI does;
+  - `fuzz_worker.py` runs fuzz generations for the orchestrator;
+  - the rest are stand-ins for modules Pyodide lacks (some adapted from Kalapana).
+- `web/`: browser-side modules. So far these are the fuzz orchestrator (`fuzz-orchestrator.mjs`), its
+  worker (`fuzz-worker.mjs`) and CI's variant table (`fuzz-variants.mjs`).
+- `build/`: builds `core.zip`, the Archipelago runtime each worker unpacks, in CI's image layout.
 
 ## Development
 

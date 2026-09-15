@@ -128,10 +128,14 @@ The `unittest-report` and `fuzz-report` trees are what the CI's `aggregate_unitt
   1. fetch and verify the pinned inputs (`deploy/fetch-inputs.mjs`);
   2. build the core bundle (`build/build-core.mjs`);
   3. copy the app.
-- **Core bundle.** `core.zip` unpacks at `/` in each worker:
-  - `ap/`: AP's source tree without worlds, as the CI image has it after `prepare_worlds.sh`, plus the
-    pinned `fuzz.py` and `hooks/` and the lobby's `ap_tests.py`;
-  - `supported/`: APQuest zipped as CI zips it, plus the pinned tracker and empty apworlds;
+- **Core bundle.** `core.zip` unpacks at `/` in each worker, laid out as CI's `ap-checker` image is,
+  because fuzzer hooks hardcode its paths (`with_empty` reads `/ap/empty.apworld`, `gerpocalypse` reads
+  `/ap/supported_worlds/kh1-<version>.apworld`):
+  - `ap/archipelago/`: AP's source tree as `prepare_worlds.sh` leaves it (only `generic` and the `_*`
+    support packages in `worlds/`), plus the pinned `fuzz.py` and `hooks/`, the lobby's `ap_tests.py`, and
+    `worlds/tracker.apworld`, which CI's image adds for every job;
+  - `ap/supported_worlds/`: APQuest and Kingdom Hearts zipped as `<world>-<AP version>.apworld`;
+  - `ap/empty.apworld`: the empty world;
   - `site-packages/`: vendored wheels and source packages, and `runtime/`.
 
   **How it's built.** The build runs `build/build_core.py` under Pyodide, so bytecode comes from exactly the
@@ -182,6 +186,39 @@ doesn't run `fuzz.py`'s `__main__`.
 The page and the Pyodide runner are built separately. The page is developed against a fake worker that
 sends the same messages.
 
+**As built.**
+- **Modules.** Three modules make up the driver:
+  - `web/fuzz-orchestrator.mjs` runs one variant;
+  - `web/fuzz-worker.mjs` runs inside each worker;
+  - `runtime/fuzz_worker.py` is its Python side.
+
+  The orchestrator doesn't depend on the environment: its caller supplies `spawn()`, which starts a
+  browser `Worker`, or a `worker_threads` worker under Node (`spikes/03-fuzz/`). `web/fuzz-variants.mjs`
+  holds CI's variant table.
+- **A worker's life.** A worker boots from `core.zip` and stages the apworld under test in `worlds/`, as
+  `run_fuzz.py` does. It then imports `fuzz.py` as a module, so its pool-driving `__main__` never runs.
+  Each run is two steps:
+  - `prepare(i, seed)` writes the run's YAMLs as `fuzz.py`'s main loop does, seeded with `<seed>-<i>` so
+    any run can be reproduced, and posts them to the orchestrator;
+  - `generate()` follows `gen_wrapper`: output captured, hooks called, outcome classified, then
+    `dump_generation_output`'s files and `write_report`'s error key returned.
+- **Hooks.**
+  - **Setup.** `setup_main` runs in every worker, standing in for the main process whose state a forked
+    pool worker would inherit. `setup_worker` then runs on separate instances.
+  - **Timeouts.** The orchestrator times each generation from the worker's `started` message. At the
+    limit it terminates the worker, and the replacement asks the main-process hook instances to
+    reclassify the timeout, as `fuzz.py`'s timeout handler does. This matters: most check hooks count any
+    other outcome, a timeout included, as ignored, and `gerpocalypse` counts a timeout as a success. The
+    killed run's partial output is lost, so its log holds only the timeout line.
+- **Report.** The orchestrator collects outcomes into `report.json`, with the same `stats` and `errors`
+  keys as `fuzz.py`, and keeps dumped files at their `fuzz_output/` paths. CI's `aggregate_fuzz.py`
+  renders an identical comment from Waimea's and native's output.
+- **Differences from `fuzz.py`:**
+  - a `setup_worker` failure stops the variant with that error, where natively every run fails;
+  - a fatal interpreter error counts a failure under its own descriptive key, where a crashed pool worker
+    counts one under `"None"`;
+  - a worker is restarted when its heap passes the limit.
+
 ### Unit tests
 
 `runtime/unit_tests.py` runs them the way CI does:
@@ -190,8 +227,10 @@ sends the same messages.
   `__main__` block, so test ids, outcomes and the `.aptest` and `.toml` files match.
 - **Loading.** `ap_tests.py` gets its apworlds from the lobby's `handler.py`, which needs OpenTelemetry
   and requests. `unit_tests.py` stands in for it and loads apworlds the same way: `zipimport` plus AP's
-  `WorldSource`, with the manifest's `world_version` applied. As in CI's image, APQuest and the world under
-  test both load from zipped apworlds, and no other world is in `worlds/`.
+  `WorldSource`, with the manifest's `world_version` applied. Like the handler, it first copies each
+  apworld to `<module>.apworld`, because the file's stem becomes the module name. As in CI's image, APQuest
+  and the world under test load from zipped apworlds, and `worlds/` otherwise holds only the tracker's
+  apworld, which `ap_tests.py` unloads.
 - **Events.** It emits one JSON event per test (`plan`, `start`, `result`, `stop`, `done`) for the page:
   - a subtest's result carries its parent's id;
   - a test with a failed subtest gets no result of its own, so the page closes each test on `stop`;
@@ -279,7 +318,12 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
    - in Chrome and Firefox workers;
    - from the core bundle (`spikes/02-unit-tests/`).
 3. **Fuzz driver.** The orchestrator and workers, timeouts and restarts, and a CI-compatible
-   `report.json`.
+   `report.json`. Built and checked under Node (`spikes/03-fuzz/`):
+   - TUNIC's `default` and seven hook variants match native `fuzz.py`;
+   - timeouts and heap restarts work;
+   - CI's `aggregate_fuzz.py` renders identical output.
+
+   Still to check: generation failures, fatal errors, meta YAMLs, and browser workers.
 4. **Hook variants.** The in-process hooks, then the determinism design.
 5. **Web app, server and image.**
 6. **Self-check**, if it proves worthwhile.

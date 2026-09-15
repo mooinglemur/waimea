@@ -34,21 +34,21 @@ with zipfile.ZipFile(os.path.join(out_dir, "tree.zip"), "w", zipfile.ZIP_DEFLATE
         for file in walk(root):
             z.write(file, prefix + os.path.relpath(file, root))
 
-    z.write(ap_tests, "ap/ap_tests.py")
+    z.write(ap_tests, "ap/archipelago/ap_tests.py")
     for name in sorted(os.listdir(AP)):
         path = os.path.join(AP, name)
         if name in EXCLUDED_TOP:
             continue
         if os.path.isfile(path):
-            z.write(path, f"ap/{name}")
+            z.write(path, f"ap/archipelago/archipelago/{name}")
         else:
-            add_tree(path, f"ap/{name}/")
+            add_tree(path, f"ap/archipelago/archipelago/{name}/")
     for name in sorted(os.listdir(os.path.join(AP, "worlds"))):
         path = os.path.join(AP, "worlds", name)
         if os.path.isfile(path) and name.endswith(".py"):
-            z.write(path, f"ap/worlds/{name}")
+            z.write(path, f"ap/archipelago/archipelago/worlds/{name}")
         elif os.path.isdir(path) and (name in KEPT_WORLDS or (name.startswith("_") and name != "_sc2common")):
-            add_tree(path, f"ap/worlds/{name}/")
+            add_tree(path, f"ap/archipelago/archipelago/worlds/{name}/")
 
     for wheel in sorted(os.listdir(os.path.join(REPO, "vendor", "wheels"))):
         with zipfile.ZipFile(os.path.join(REPO, "vendor", "wheels", wheel)) as archive:

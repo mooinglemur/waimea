@@ -1,13 +1,15 @@
 """Prepares Pyodide's interpreter for Archipelago's tests and the fuzzer.
 
-Expects the core bundle unpacked at / (AP under /ap, vendored modules under /site-packages).
+Expects the core bundle unpacked at /, laid out as the index CI's image is, since fuzzer hooks name those
+paths: AP's root at /ap/archipelago, zipped core worlds in /ap/supported_worlds, vendored modules under
+/site-packages.
 """
 import concurrent.futures
 import concurrent.futures.thread
 import os
 import sys
 
-AP_ROOT = "/ap"
+AP_ROOT = "/ap/archipelago"
 SITE_PACKAGES = "/site-packages"
 
 

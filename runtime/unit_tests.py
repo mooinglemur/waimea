@@ -71,14 +71,21 @@ def read_manifest(apworld_path):
     return None, None
 
 
-def load_apworld(apworld_path):
-    """Loads an apworld as handler.ApHandler.load_apworld does. The file's stem is its module name."""
+def load_apworld(apworld_path, name):
+    """Loads an apworld as handler.ApHandler.load_apworld does: copied to <name>.apworld, since the file's
+    stem becomes its module name (supported worlds are stored as <name>-<AP version>.apworld)."""
+    import shutil
+    import tempfile
+
     import worlds
     from worlds import WorldSource
     from worlds.AutoWorld import AutoWorldRegister
 
+    staged = os.path.join(tempfile.mkdtemp(), f"{name}.apworld")
+    shutil.copy(apworld_path, staged)
+    apworld_path = staged
     game, world_version = read_manifest(apworld_path)
-    module = f"worlds.{Path(apworld_path).stem}"
+    module = f"worlds.{name}"
     _apworld_specs[module] = zipimport.zipimporter(apworld_path).find_spec(module)
     if not WorldSource(apworld_path, is_zip=True, relative=False).load():
         raise RuntimeError(f"{Path(apworld_path).name} failed to load; see the log")
@@ -111,8 +118,8 @@ def run(apworld_path, apquest_path, apworld, version, world_name, annotations_fo
     ap_tests = _import_ap_tests([os.path.dirname(apquest_path), os.path.dirname(apworld_path), apworld,
                                  version, world_name, annotations_folder, output_folder])
     os.makedirs(output_folder, exist_ok=True)
-    load_apworld(apworld_path)
-    load_apworld(apquest_path)
+    load_apworld(apworld_path, apworld)
+    load_apworld(apquest_path, "apquest")
 
     # Unload as many worlds as possible before running tests, as ap_tests.py does.
     for loaded_world in list(AutoWorldRegister.world_types):

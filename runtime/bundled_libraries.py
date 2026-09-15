@@ -13,7 +13,7 @@ import os
 import re
 import sys
 
-WORLDS_ROOT = "/ap/worlds"
+WORLDS_ROOT = "/ap/archipelago/worlds"
 _REQUIREMENT_NAME = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
 

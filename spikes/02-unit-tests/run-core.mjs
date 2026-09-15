@@ -55,7 +55,7 @@ let status;
 try {
   status = await time("tests", () => py.runPython(`
 import unit_tests
-unit_tests.run(f"/uploads/{world}.apworld", "/supported/apquest.apworld", world, "0.0.0", game, "/annotations", "/out", emit)
+unit_tests.run(f"/uploads/{world}.apworld", "/ap/supported_worlds/apquest-0.6.7.apworld", world, "0.0.0", game, "/annotations", "/out", emit)
 `));
 } catch (err) {
   status = "crash";
@@ -68,7 +68,7 @@ for (const name of py.FS.analyzePath("/out").exists ? py.FS.readdir("/out") : []
 // Whether imports used the bundled bytecode rather than compiling sources.
 const cached = py.runPython(`
 import sys
-mods = [m for m in sys.modules.values() if getattr(m, "__spec__", None) and getattr(m.__spec__, "cached", None) and m.__spec__.origin and m.__spec__.origin.startswith(("/ap/", "/site-packages/"))]
+mods = [m for m in sys.modules.values() if getattr(m, "__spec__", None) and getattr(m.__spec__, "cached", None) and m.__spec__.origin and m.__spec__.origin.startswith(("/ap/archipelago/", "/site-packages/"))]
 import os
 f"{sum(os.path.exists(m.__spec__.cached) for m in mods)}/{len(mods)}"
 `);

@@ -15,6 +15,13 @@ test("a Kubernetes service link in WAIMEA_PORT falls back to the default with a 
   assert.match(warnings[0], /WAIMEA_PORT=tcp:\/\/10\.0\.0\.1:8080/);
 });
 
+test("the service-link forms Kubernetes injects all fall back to the default", () => {
+  for (const value of ["tcp://0.0.0.0:8080", "tcp://10.43.12.7:8080", "udp://10.43.12.7:53", "8080/tcp", " "]) {
+    const { result } = port(value);
+    assert.equal(result, 8080, JSON.stringify(value));
+  }
+});
+
 test("a plain port number is used, and an unset one falls back", () => {
   assert.deepEqual(port("9000"), { result: 9000, warnings: [] });
   assert.deepEqual(port(undefined), { result: 8080, warnings: [] });

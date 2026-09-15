@@ -230,13 +230,32 @@ native 4. So Waimea scales the limit by a measured factor.
   comes from the seed `waimea-calibration-<i>`, and its generation seed is pinned to `1000000 + i`, so every
   runtime does the same work. `deploy/calibration.json` holds these values and the reference: CI's
   per-run generation times for 40 runs on 4 workers, measured by `calibration/measure_native.py`.
+- **Reference.** It's measured by the index CI's manual `waimea-calibration` job, on the same
+  `k8s-sandboxed` runners as the fuzz jobs. Two runs came back on 2026-09-15:
+
+  | Runner | CPU | Median per generation |
+  |---|---|---|
+  | One of the fleet's slowest | Xeon E5-2690 v4 | 0.291 s |
+  | The fleet's fastest | Xeon Gold 6248 | 0.259 s |
+
+  Both ran Python 3.12.14 with 6 CPUs per pod. The slow runner is about 12% slower. Waimea uses the slow
+  runner's reference: a CI job can land on any runner, so Waimea flags any generation that could time out
+  on a slow one.
 - **Measuring.** Before fuzzing, `web/calibration.mjs` runs the first runs of that workload through the
   fuzz orchestrator, on the worker count the fuzz will use: 12 runs, or 3 per worker when there are more
   than 4. That captures Pyodide's overhead, the machine, and the chosen worker count's load together.
 - **The factor.** It is the median of each matched run's local time over its reference time, clamped to
-  between 1× and 4×. The timeout is CI's 30 seconds times the factor, rounded up. Both are reported with the
-  results.
-- **Measured under Node against a stand-in reference on the same machine:**
+  between 0.5× and 4×. The timeout is CI's 30 seconds times the factor, rounded up. Both are reported with
+  the results.
+  - A factor below 1× is allowed. A machine faster than CI's runner gets a shorter timeout, because 30
+    seconds on it buys more work than CI allows; flooring the factor at 1× would pass generations CI times
+    out.
+  - The floor guards against a bad measurement.
+  - Under Pyodide, a Ryzen 9 5900X desktop measured 0.79× to 0.80× against the slow runner, which is a
+    timeout of about 24 seconds.
+- **Earlier, against a stand-in.** Before CI's reference existed, the same desktop's native timings stood
+  in for it. They were 1.57× faster than the slow runner per run, so factors measured against them were
+  too high. Under Node:
   - the reference was stable, with medians of 0.1893, 0.1893 and 0.1886 seconds over three runs;
   - the factor rose with worker count: 1.14× at 2 workers, 1.21× at 4, and 1.28× at 8, for timeouts of
     35, 37 and 39 seconds;
@@ -250,7 +269,8 @@ native 4. So Waimea scales the limit by a measured factor.
   - Individual runs vary around the median (0.93× to 1.82× for Spicy), so a run near the limit can still
     time out in Waimea and pass natively, or the reverse. The report should say so.
   - Anything that changes after calibration, such as a throttled background tab, isn't captured.
-  - The reference must come from CI's runner (open question 4).
+  - The reference must be remeasured when CI's runner fleet, the pinned Archipelago or fuzzer, or the
+    workload changes.
 
 ### Unit tests
 
@@ -372,9 +392,6 @@ that needs native executables.
    workers.
 3. **Determinism design:** a second worker with `SharedArrayBuffer`, or the comparison moved into the
    orchestrator.
-4. **CI's reference timing.** The fuzz timeout calibration (see "Fuzz timeout calibration") needs the
-   workload measured on CI's `k8s-sandboxed` runner. `deploy/calibration.json` currently holds a stand-in
-   from a developer machine. The job that measures it is requested in `Archipelago-index-ci`'s handoff.
-5. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
+4. **Showing reclassified timeouts.** Most check hooks turn a timeout into "ignored". With 100 runs of
    Librarian under `check-collect-accessibility`, Waimea reported 6 ignored runs, all timeouts, where
    native reported 1. The report should count timeouts separately from what hooks reclassify them to.

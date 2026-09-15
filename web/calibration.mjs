@@ -4,12 +4,15 @@
 // plus whatever this machine and the chosen worker count add. Before fuzzing, the same fixed workload CI's
 // reference was measured on (deploy/calibration.json) runs here on the same workers the fuzz will use.
 // Each run pins its YAML seed and generation seed, so both sides generate identically. The factor is the
-// median, over matched runs, of this run's generation time divided by the reference's, clamped to
-// [MIN_FACTOR, MAX_FACTOR] so an overloaded machine can't stretch timeouts without bound.
+// median, over matched runs, of this run's generation time divided by the reference's.
+//
+// The factor can be below 1: a fast machine gets a shorter timeout, since 30 seconds on it buys more work
+// than 30 seconds on CI's runner. It's clamped to [MIN_FACTOR, MAX_FACTOR], so a bad measurement can't
+// collapse the timeout and an overloaded machine can't stretch it without bound.
 
 import { runVariant } from "./fuzz-orchestrator.mjs";
 
-export const MIN_FACTOR = 1;
+export const MIN_FACTOR = 0.5;
 export const MAX_FACTOR = 4;
 
 const median = (values) => {

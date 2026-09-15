@@ -35,8 +35,8 @@ Planning. The feasibility spike is done, and nothing else is built yet.
 - `web/calibration.mjs`, `calibration/` and `deploy/calibration.json`: fuzz timeout calibration.
   - The browser times a fixed workload against a reference measured natively by
     `calibration/measure_native.py`, and scales CI's 30-second timeout by the difference.
-  - The reference in `deploy/calibration.json` is a stand-in from a developer machine until one is measured
-    on the index CI's runner.
+  - The reference in `deploy/calibration.json` comes from the index CI's `waimea-calibration` job, on one
+    of its slowest runners.
 
 ## Development
 

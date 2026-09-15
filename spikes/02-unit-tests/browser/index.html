@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>waimea unit-test probe</title>
+<pre id="out"></pre>
+<script type="module">
+  const params = new URLSearchParams(location.search);
+  window.probe = { done: false, booted: null, plan: 0, results: 0, stops: 0, outcomes: {}, finished: null, error: null, messages: 0 };
+  const out = document.getElementById("out");
+  const worker = new Worker("./worker.mjs", { type: "module" });
+  worker.onmessage = ({ data }) => {
+    const p = window.probe;
+    p.messages++;
+    if (data.type === "booted") p.booted = data.timings;
+    else if (data.type === "events") {
+      for (const event of data.events) {
+        if (event.type === "plan") p.plan = event.tests.length;
+        else if (event.type === "result") {
+          p.results++;
+          p.outcomes[event.outcome] = (p.outcomes[event.outcome] ?? 0) + 1;
+        } else if (event.type === "stop") p.stops++;
+        else if (event.type === "done") p.doneEvent = event;
+      }
+    } else if (data.type === "finished") { p.finished = data; p.done = true; }
+    else if (data.type === "error") { p.error = data.text; p.done = true; }
+    out.textContent = JSON.stringify(p, null, 1);
+  };
+  worker.onerror = (e) => { window.probe.error = `worker onerror: ${e.message}`; window.probe.done = true; };
+  worker.postMessage({ world: params.get("world"), game: params.get("game") });
+</script>

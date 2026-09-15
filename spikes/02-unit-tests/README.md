@@ -18,6 +18,22 @@ zip and with no other worlds present:
   `test/general`.
 - **Subtest events.** Pyodide sent 2,021 result events for TUNIC and 5,514 for Stardew, most of them
   subtests.
+- **Browsers.** The same trees also passed all 205 tests in a module Web Worker in headless Chrome and
+  Firefox (`browser/`). Stardew reported 5,515 result events there, one more than under Node, probably from
+  a subtest whose count depends on its random seed; no outcome differed.
+
+  | World | Chrome tests | Firefox tests | Boot, both browsers |
+  |---|---|---|---|
+  | TUNIC | 2.1 s | 2.7 s | about 1.5 s |
+  | Stardew Valley | 12.3 s | 18.5 s | about 1.5 s |
+
+  Chrome ran alongside Firefox on the same machine, so both timings include some contention.
+- **Core bundle.** Run from a `core.zip` built by `build/build-core.mjs` instead of the tree (`run-core.mjs`
+  under Node), both worlds again passed all 205 tests. All 107 imported AP and site-packages modules loaded
+  from the bundle's precompiled caches. Timings matched the tree runs within noise, and two builds were
+  byte-identical.
+- **Varying subtest counts.** Result counts varied between runs: TUNIC had 2,021 and 2,031, Stardew 5,514,
+  5,515 and 5,525. Some tests create a varying number of subtests; the 205 top-level tests never varied.
 - **Heap.** 50 MiB for TUNIC and 60 MiB for Stardew at the end.
 
 **The Stardew leak.** Before the patch in `runtime/waimea_boot.py`, Stardew failed
@@ -37,6 +53,11 @@ zip and with no other worlds present:
   `apquest.apworld` and `<world>.apworld`.
 - `run.mjs <out dir> <world> <game> <results dir>`: boots Pyodide, runs the tests, prints progress, and
   writes `events.json` and the `.aptest` and `.toml` files.
+- `browser/`: the same run in a browser worker. `serve.mjs <tree dir>` serves the page, `vendor/pyodide`
+  and the tree. `drive.mjs <chrome|firefox> <world> <game>` runs it headless and prints a summary. Events
+  reach the page in batches of 200.
+- `run-core.mjs <core.zip> <world>.apworld <game> <results dir>`: the same run from a core bundle built by
+  `build/build-core.mjs`, reporting how many imported modules used the bundle's bytecode.
 - `leak_probe.py` and `leak_probe.mjs`: check whether a solo multiworld survives `gc.collect()`.
   `leak_probe.py` also runs natively, with `APWORLD`, `APQUEST` and `GAME` set and AP's root as the
   working directory.

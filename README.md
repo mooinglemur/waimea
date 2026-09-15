@@ -31,7 +31,8 @@ Planning. The feasibility spike is done, and nothing else is built yet.
 ## Development
 
 ```sh
-node deploy/fetch-inputs.mjs vendor   # pinned inputs into vendor/; needs tar and bzip2
+node deploy/fetch-inputs.mjs vendor        # pinned inputs into vendor/; needs tar and bzip2
+node build/build-core.mjs vendor build/out  # core.zip, the runtime each worker unpacks
 ```
 
 ## License

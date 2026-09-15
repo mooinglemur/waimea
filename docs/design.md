@@ -70,12 +70,13 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
 
 ## The web app
 
-1. The user supplies an `.apworld` in one of two ways:
-   - with the browser's file picker; or
-   - by entering a URL, usually a GitHub release asset.
+1. The user picks an `.apworld` with the browser's file picker. If it holds several worlds, the user
+   chooses one. The version comes from the apworld's manifest.
 
-   Either way the page ends up with the same bytes and continues identically. If the apworld holds several
-   worlds, the user chooses one. The version comes from the apworld's manifest.
+   **Deferred: URL entry.** An apworld URL field, usually for a GitHub release asset, would need a server
+   relay. The page can't fetch those downloads itself: neither `github.com`'s redirect nor
+   `release-assets.githubusercontent.com` sends `Access-Control-Allow-Origin` (checked 2026-09-15). No relay
+   will be built, so URL entry waits until an apworld host allows cross-origin downloads.
 2. The page lists the tests to run, each section with a checkbox:
    - the unit tests;
    - each fuzz variant, with an editable run count;
@@ -123,21 +124,24 @@ The `unittest-report` and `fuzz-report` trees are what the CI's `aggregate_unitt
 - **Server.** A small Node 26 server with no npm dependencies, adapted from Kalapana's `server/http.mjs`.
   It handles compression, cache headers and content security policies. It keeps no data volume and never
   runs world code.
-- **Apworld relay.** GitHub release downloads can't be fetched from a page: neither `github.com`'s redirect
-  nor `release-assets.githubusercontent.com` sends `Access-Control-Allow-Origin` (checked 2026-09-15). So
-  the server relays them with `GET /relay?url=<url>`:
-  - https only, to GitHub release downloads (`github.com/<owner>/<repo>/releases/download/...`);
-  - redirects followed only to GitHub's asset hosts, re-checking each hop;
-  - no cookies or credentials sent;
-  - a size cap, with a zip content check, and a timeout;
-  - streamed to the page and never stored or cached.
-
-  Other hosts can be added to the allowlist later. A general open relay would let anyone reach addresses
-  inside the cluster (server-side request forgery).
 - **Image.** A multi-stage image:
-  1. fetch and verify the pinned inputs (`inputs.json`, in Kalapana's format);
-  2. build AP's core bundle, precompiled, with vendored wheels and runtime stubs;
+  1. fetch and verify the pinned inputs (`deploy/fetch-inputs.mjs`);
+  2. build the core bundle (`build/build-core.mjs`);
   3. copy the app.
+- **Core bundle.** `core.zip` unpacks at `/` in each worker:
+  - `ap/`: AP's source tree without worlds, as the CI image has it after `prepare_worlds.sh`, plus the
+    pinned `fuzz.py` and `hooks/` and the lobby's `ap_tests.py`;
+  - `supported/`: APQuest zipped as CI zips it, plus the pinned tracker and empty apworlds;
+  - `site-packages/`: vendored wheels and source packages, and `runtime/`.
+
+  **How it's built.** The build runs `build/build_core.py` under Pyodide, so bytecode comes from exactly the
+  Python the browser runs. Sources stay in the bundle: unittest discovery finds tests by their `.py` files,
+  and tracebacks show source lines. Each source also gets an unchecked hash-based `.pyc` in `__pycache__`,
+  which imports use without checking the source; every imported AP module did in the TUNIC and Stardew
+  runs.
+
+  **Result.** Timestamps are fixed, so two builds are byte-identical. It is 14 MB and builds in under
+  2 seconds.
 - **CI.** GitLab CI runs `node --test` and syntax checks, then builds with buildah. There is no deploy job.
 - **Headers.**
   - The page's policy allows scripts only from Waimea and denies other connections.
@@ -192,8 +196,10 @@ sends the same messages.
   - a subtest's result carries its parent's id;
   - a test with a failed subtest gets no result of its own, so the page closes each test on `stop`;
   - CI's harness stops the whole run at the first unexpected error, and `done` says so;
-  - subtests make the stream large (5,514 results for Stardew Valley's 205 tests), so the page batches
-    updates rather than rendering each event.
+  - subtests make the stream large (about 5,500 results for Stardew Valley's 205 tests), so the page
+    batches updates rather than rendering each event;
+  - some tests create a varying number of subtests from run to run, so the page shows progress by test
+    against the planned count and never treats a subtest total as fixed.
 
 What `ap_tests.py` itself does:
 - **Harness.** `ap_tests.py` runs everything with `unittest` in one process:
@@ -232,8 +238,7 @@ which would need stubs, and it needs AP's `data/options.yaml` template and `jinj
 - **Worker isolation.** World code runs only in Web Workers, whose policy allows no network. That replaces
   `unshare -rn` and the network audit. A worker can't reach the page's DOM or localStorage. Kalapana's
   `workerPolicy` shows the pattern.
-- **Server.** The server never imports an apworld, and never receives one from a user. For URL entry it
-  relays a public download from an allowlisted host, without storing it.
+- **Server.** The server never receives or imports an apworld.
 - **Results.** Results can be forged, which is why Waimea is self-service only.
 
 ## Pyodide constraints
@@ -268,9 +273,11 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
 
 1. **Feasibility spike.** Done: `docs/spike-01-feasibility.md`.
 2. **Unit tests in Pyodide.** The equivalent of `ap_tests.py` for one apworld, with other worlds
-   unloaded. The runner (`runtime/unit_tests.py`) passes all 205 tests for TUNIC and Stardew Valley under
-   Node, matching native (`spikes/02-unit-tests/`). Still to do: running it in a browser worker, and the
-   core bundle build.
+   unloaded. The runner (`runtime/unit_tests.py`) passes all 205 tests for TUNIC and Stardew Valley,
+   matching native:
+   - under Node;
+   - in Chrome and Firefox workers;
+   - from the core bundle (`spikes/02-unit-tests/`).
 3. **Fuzz driver.** The orchestrator and workers, timeouts and restarts, and a CI-compatible
    `report.json`.
 4. **Hook variants.** The in-process hooks, then the determinism design.

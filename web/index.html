@@ -39,17 +39,43 @@
   <main>
     <p class="intro">
       Run an apworld's unit tests and generation fuzzing the way the Archipelago index CI does. Everything
-      runs here in your browser; your apworld isn't uploaded anywhere.
+      runs here in your browser; your apworld isn't uploaded anywhere. The index CI remains the
+      authoritative check.
     </p>
 
-    <form id="choose" class="choose" autocomplete="off">
-      <label>Apworld <input id="apworld" type="file" accept=".apworld" disabled></label>
-    </form>
+    <section class="card">
+      <form id="choose" class="choose" autocomplete="off">
+        <label>Apworld <input id="apworld" type="file" accept=".apworld" disabled></label>
+      </form>
+      <p id="status" class="notice status" role="status">
+        <span id="state" class="state" aria-hidden="true"></span>
+        <span id="message">Loading&hellip;</span>
+      </p>
+      <div id="world" class="world" hidden></div>
+      <pre id="inspect-error" class="log" hidden></pre>
+    </section>
 
-    <p id="status" class="notice status" role="status">
-      <span id="state" class="state" aria-hidden="true"></span>
-      <span id="message">Loading&hellip;</span>
-    </p>
+    <form id="options" class="card options" autocomplete="off" hidden></form>
+
+    <section id="run" class="run" hidden>
+      <div class="run-header">
+        <h2>Results</h2>
+        <button id="stop" type="button">Stop</button>
+      </div>
+      <div id="sections" class="sections"></div>
+    </section>
+
+    <section id="summary" class="card summary" hidden>
+      <p id="summary-text"></p>
+      <div class="actions">
+        <button id="save" type="button">Save report</button>
+        <button id="again" type="button">Change options and run again</button>
+      </div>
+      <p class="hint">
+        The report is a zip laid out like the index CI's artifacts, with <code>summary.md</code> and
+        <code>environment.json</code>.
+      </p>
+    </section>
   </main>
 
   <footer><span id="version" class="version">waimea</span></footer>

@@ -31,6 +31,9 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `apworld_info.py` describes an uploaded apworld (module, manifest, games);
   - the rest are stand-ins for modules Pyodide lacks (some adapted from Kalapana).
 - `web/`: the page and its modules.
+  - `index.html`, `app.mjs` and `app.css` are the page.
+  - `unit-view.mjs` and `fuzz-view.mjs` render its result sections, and `dom.mjs` builds elements (always
+    as text: test names, tracebacks and logs come from apworld code).
   - `session.mjs` runs a whole session (inspection, unit tests, calibration, fuzz variants) as a stream of
     events.
   - `test-worker.mjs` and `fuzz-worker.mjs` are the two worker types.

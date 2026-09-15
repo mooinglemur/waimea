@@ -406,8 +406,17 @@ From Kalapana's spikes (Node, Chrome 153, Firefox 155) and Waimea's spike 1:
      A Librarian session in headless Chrome against the real server took 31 s: inspection, unit tests
      (the same 2 failures as CI), calibration, and 8 runs each of `default` and `check-ut`. CI's aggregators
      read its report (`spikes/05-session/`).
-   - **To do.** The page: picker, test list and options, progress with expandable details, summary,
-     download.
+   - **Built.** The page (`web/app.mjs`, with sections rendered by `web/unit-view.mjs` and
+     `web/fuzz-view.mjs`):
+     - **Choosing.** Pick an apworld and see its details; set options (tests, preset, run counts,
+       workers, optional files).
+     - **Running.** Live sections with pass, fail and running markers and counts, expandable into
+       tests, tracebacks, error classes, and each failing run's log and YAMLs, even while later sections
+       run.
+     - **Around it.** Stop, a warning before leaving mid-run, a summary, and Save report.
+
+     Driven through its own controls in Chrome and Firefox against the real server, with no page errors
+     (`spikes/06-page/`).
 6. **Self-check**, if it proves worthwhile.
 
 Out of scope: replacing the index CI, posting results to GitHub or apdiff-viewer, game clients, and anything

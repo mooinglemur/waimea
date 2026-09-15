@@ -18,12 +18,14 @@ import os
 import random
 import shutil
 import tempfile
+import time
 import traceback
 from argparse import Namespace
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 
 _state = {}
+_randint = random.randint
 
 
 def _find_hook(hook_path):
@@ -177,8 +179,13 @@ def _finish(i, yamls_dir, outcome, raised, out_buf):
     return result
 
 
-def generate():
-    """Generates the prepared run as gen_wrapper does, without its timer. Returns the outcome record."""
+def generate(generation_seed=None):
+    """Generates the prepared run as gen_wrapper does, without its timer. Returns the outcome record,
+    with the seconds call_generate took.
+
+    generation_seed pins the seed call_generate otherwise draws at random, so a calibration run does the
+    same work in every runtime.
+    """
     fuzz = _state["fuzz"]
     args = _state["args"]
     from Options import OptionError
@@ -187,11 +194,19 @@ def generate():
     out_buf = StringIO()
     raised = None
     mw = None
+    seconds = None
     try:
         with redirect_stdout(out_buf), redirect_stderr(out_buf), tempfile.TemporaryDirectory(prefix="apfuzz", dir=_state["tmp"]) as output_path:
             try:
                 fuzz.patched_init_logging("Fuzzer")
-                mw = fuzz.call_generate(yamls_dir, args, output_path)
+                if generation_seed is not None:
+                    fuzz.random.randint = lambda _a, _b: int(generation_seed)
+                started = time.perf_counter()
+                try:
+                    mw = fuzz.call_generate(yamls_dir, args, output_path)
+                finally:
+                    seconds = time.perf_counter() - started
+                    fuzz.random.randint = _randint
             except Exception as e:
                 raised = e
             finally:
@@ -230,6 +245,7 @@ def generate():
         log = wrapped.out_buf + "\n".join(traceback.format_exception(wrapped))
         result = {"outcome": "failure", "key": "None", "dump": {"kind": "error", "files": {**_read_dir(yamls_dir), f"{i}.log": log}}}
     shutil.rmtree(yamls_dir, ignore_errors=True)
+    result["seconds"] = seconds
     return json.dumps(result)
 
 

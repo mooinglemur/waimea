@@ -1,11 +1,13 @@
 // Runs one fuzz variant under Node with web/fuzz-orchestrator.mjs, and writes fuzz_output/ as fuzz.py does.
 // Usage: node run.mjs --core core.zip --apworld <world>.apworld --variant default --runs 100 [--jobs 4]
-//          [--timeout 30] [--heap-limit-mib 1536] [--seed waimea] --out <dir>
+//          [--timeout 30] [--heap-limit-mib 1536] [--seed waimea] [--calibration deploy/calibration.json] --out <dir>
+// With --calibration, the calibration workload runs first on the same workers, and --timeout is scaled.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { Worker } from "node:worker_threads";
+import { calibrate, scaledTimeout } from "../../web/calibration.mjs";
 import { runVariant } from "../../web/fuzz-orchestrator.mjs";
 import { VARIANTS } from "../../web/fuzz-variants.mjs";
 
@@ -19,6 +21,7 @@ const { values: opts } = parseArgs({
     timeout: { type: "string", default: "30" },
     "heap-limit-mib": { type: "string", default: "1536" },
     seed: { type: "string", default: "waimea" },
+    calibration: { type: "string" },
     out: { type: "string" },
   },
 });
@@ -32,12 +35,11 @@ const pyodideDir = new URL("../../vendor/pyodide/", import.meta.url).pathname;
 const toArrayBuffer = (buf) => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 const module = basename(opts.apworld, ".apworld");
 const runs = Number(opts.runs);
-const init = {
+const jobs = Number(opts.jobs);
+const shared = {
   pyodideUrl: pathToFileURL(join(pyodideDir, "pyodide.mjs")).href,
   indexURL: pyodideDir,
   core: toArrayBuffer(readFileSync(opts.core)),
-  apworld: { module, bytes: toArrayBuffer(readFileSync(opts.apworld)) },
-  config: { apworld: module, runs, timeout: Number(opts.timeout), hooks: variant.hook ? [variant.hook] : [] },
 };
 
 const spawn = ({ onMessage, onError }) => {
@@ -55,6 +57,23 @@ const spawn = ({ onMessage, onError }) => {
   };
 };
 
+let timeoutSeconds = Number(opts.timeout);
+let calibration = null;
+if (opts.calibration) {
+  const calibrationStarted = performance.now();
+  calibration = await calibrate({ spawn, init: shared, jobs, calibration: JSON.parse(readFileSync(opts.calibration, "utf8")) });
+  calibration.seconds = +((performance.now() - calibrationStarted) / 1000).toFixed(1);
+  calibration.ciTimeoutSeconds = timeoutSeconds;
+  timeoutSeconds = scaledTimeout(timeoutSeconds, calibration.factor);
+  calibration.timeoutSeconds = timeoutSeconds;
+  console.log(`calibration: ${JSON.stringify(calibration)}`);
+}
+const init = {
+  ...shared,
+  apworld: { module, bytes: toArrayBuffer(readFileSync(opts.apworld)) },
+  config: { apworld: module, runs, timeout: timeoutSeconds, hooks: variant.hook ? [variant.hook] : [] },
+};
+
 const started = performance.now();
 let lastPrint = 0;
 const result = await runVariant({
@@ -62,8 +81,8 @@ const result = await runVariant({
   init,
   apworld: module,
   runs,
-  jobs: Number(opts.jobs),
-  timeoutSeconds: Number(opts.timeout),
+  jobs,
+  timeoutSeconds,
   heapLimitBytes: Number(opts["heap-limit-mib"]) * 2 ** 20,
   seed: opts.seed,
   onProgress: ({ completed, stats }) => {
@@ -84,6 +103,8 @@ const summary = {
   variant: variant.name,
   game: result.game,
   seconds: +((performance.now() - started) / 1000).toFixed(1),
+  timeoutSeconds,
+  calibration,
   report: result.report,
   counters: result.counters,
 };

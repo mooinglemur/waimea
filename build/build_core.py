@@ -8,7 +8,8 @@ The layout copies the index CI's ap-checker image, because fuzzer hooks name its
                            packages left in worlds/), with the pinned fuzz.py and hooks/, the lobby's
                            ap_tests.py, and tracker.apworld in worlds/
   ap/supported_worlds/     core worlds zipped as <world>-<AP version>.apworld: APQuest, which
-                           ap_tests.py loads, and Kingdom Hearts, which the gerpocalypse hook loads
+                           ap_tests.py loads, Kingdom Hearts, which the gerpocalypse hook loads, and
+                           TUNIC, the fuzz timeout calibration workload (deploy/calibration.json)
   ap/empty.apworld         the empty world the no-restrictive-starts hook loads
   site-packages/           vendored wheels, source packages, and Waimea's runtime modules
 
@@ -31,7 +32,7 @@ OUT = "/out/core.zip"
 AP = os.path.join(VENDOR, "archipelago")
 # ModuleUpdate is replaced by Waimea's stub, which installs nothing.
 EXCLUDED_AP_TOP = {"ModuleUpdate.py", ".github", ".run"}
-SUPPORTED_WORLDS = ["apquest", "kh1"]
+SUPPORTED_WORLDS = ["apquest", "kh1", "tunic"]
 FIXED_TIME = (2000, 1, 1, 0, 0, 0)
 CACHE_TAG = sys.implementation.cache_tag
 

@@ -97,6 +97,36 @@ The five check variants were `check-indirect-conditions`, `check-item-location-c
 
 Waimea generates slower, so more of Spicy's generations cross the same wall-clock limit.
 
+**With a calibrated timeout.** Spicy was rerun for 12 runs on 2 workers with the machine otherwise quiet:
+
+| | Timeout | Successes | Failures | Timeouts | Wall time |
+|---|---|---|---|---|---|
+| Native | 30 s | 10 | 1 (`FillError`) | 1 | 112 s |
+| Waimea | 35 s (calibrated, factor 1.16×) | 7 | 0 | 5 | 191 s |
+
+- **Load matters natively too.** The quiet native run timed out once in 12 runs, against 4 in 10 when the
+  machine was busy.
+- **The gap is mostly sampling.** Waimea still timed out 5 times against native's 1, but the two sides
+  generated different random YAMLs. A matched measurement explains the gap.
+
+**Matched slowdown.** The same 12 Spicy runs were generated on both sides, with YAML seeds
+`waimea-calibration-<i>` and generation seeds `1000000 + i`, on 2 workers with no effective timeout.
+Every run succeeded on both sides.
+
+| Measure | Value |
+|---|---|
+| Native generation time | 4.0 s to 41.3 s, median 21.0 s |
+| Waimea ÷ native, per run | median 1.21×, range 0.93× to 1.82× |
+| Timeouts, native at 30 s | 2 of 12 (runs at 31.7 s and 41.3 s) |
+| Timeouts, Waimea at 35 s | 3 of 12 (42.3 s, 45.4 s and 42.7 s) |
+
+- **Calibration was about right for Spicy.** Its median slowdown, 1.21×, is close to TUNIC's calibration
+  factor of 1.16×.
+- **The remaining differences:**
+  - per-run variation around that median, which can still flip a borderline run (from 0.93× to 1.82× here);
+  - random YAMLs, which differ between runtimes, so a small unpinned sample says little.
+- **Spicy is borderline even natively.** Its generations cluster around the 30-second limit.
+
 **Replay.** Native's `FillError` run was replayed from its YAML and seed (`443369993`) with `replay.py`.
 Waimea and native both raised the same `FillError`, listing the same unreachable Hazy Maze Cave locations
 (Waimea took 6.5 s). So a failing generation reproduces exactly across runtimes, and is classified and keyed
@@ -114,6 +144,12 @@ Not covered yet:
   worker restarts, heap restarts, timeouts, fatal errors and boot times.
   - Optional: `--jobs` (default 4), `--timeout` seconds (default 30), `--heap-limit-mib` (default 1536),
     and `--seed` (default `waimea`; run i uses `<seed>-<i>`).
+  - `--calibration deploy/calibration.json` first runs the timeout calibration workload
+    (`web/calibration.mjs`) on the same worker count, then scales `--timeout` by the factor. The summary
+    records the calibration and the timeout used.
+  - Pitfall: Pyodide passes a JavaScript `null` to Python as `JsNull`, not `None`. An optional argument must
+    be left out entirely rather than passed as `null`. `web/fuzz-worker.mjs` once passed a `null` generation
+    seed, and every ordinary run failed.
   - Variant names and hooks come from `web/fuzz-variants.mjs`.
 - `replay.py` and `replay.mjs`: replay one generation from its YAMLs and seed, natively or under Pyodide, to
   check that an outcome reproduces. `fuzz.call_generate` draws its seed from `random.randint`, so the

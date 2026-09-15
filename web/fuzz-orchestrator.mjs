@@ -26,16 +26,20 @@ export const FATAL_KEY =
  * @param {number} options.timeoutSeconds  0 for none
  * @param {number} options.heapLimitBytes  0 for none
  * @param {string} options.seed
+ * @param {(i: number) => number} [options.generationSeed]  pins run i's generation seed (calibration)
  * @param {(progress: object) => void} [options.onProgress]
  * @param {AbortSignal} [options.signal]  aborting ends the variant with the runs completed so far
- * @returns {Promise<{report: object, files: Record<string, string>, counters: object, game: string | null}>}
+ * @returns {Promise<{report: object, files: Record<string, string>, counters: object, game: string | null,
+ *   durations: {i: number, outcome: string, seconds: number}[]}>}  durations: generation time of each run
+ *   that finished in its worker (not timeouts or fatal errors)
  */
-export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, heapLimitBytes, seed, onProgress = () => {}, signal }) {
+export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, heapLimitBytes, seed, generationSeed, onProgress = () => {}, signal }) {
   return new Promise((resolve, reject) => {
     const stats = { success: 0, failure: 0, timeout: 0, ignored: 0 };
     const errors = {};
     const files = {};
     const counters = { restarts: 0, heapRestarts: 0, timeouts: 0, fatal: 0, bootSeconds: [] };
+    const durations = [];
     const slots = [];
     let next = 0;
     let completed = 0;
@@ -56,7 +60,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
       }
       const report = { stats: { total: completed, ...stats }, errors };
       files["fuzz_output/report.json"] = JSON.stringify(report);
-      resolve({ report, files, counters, game, aborted: Boolean(signal?.aborted) });
+      resolve({ report, files, counters, game, durations, aborted: Boolean(signal?.aborted) });
     };
 
     const addError = (key, i) => {
@@ -103,7 +107,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
       slot.i = next++;
       slot.yamls = null;
       slot.state = "preparing";
-      slot.worker.post({ type: "run", i: slot.i, seed: `${seed}-${slot.i}` });
+      slot.worker.post({ type: "run", i: slot.i, seed: `${seed}-${slot.i}`, generationSeed: generationSeed?.(slot.i) });
     }
 
     function onTimeout(slot) {
@@ -150,6 +154,7 @@ export function runVariant({ spawn, init, apworld, runs, jobs, timeoutSeconds, h
           clearTimeout(slot.timer);
           if (message.key != null) addError(message.key, slot.i);
           if (message.dump) addDump(message.dump.kind, slot.i, message.dump.files);
+          if (message.seconds != null) durations.push({ i: slot.i, outcome: message.outcome, seconds: message.seconds });
           record(message.outcome);
           if (heapLimitBytes > 0 && message.heapBytes > heapLimitBytes) {
             counters.heapRestarts++;

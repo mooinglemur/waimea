@@ -69,8 +69,18 @@ export class FuzzVariantView {
     const { report, counters, files, aborted } = entry.result;
     const { stats } = report;
     const elapsed = this.startedAt ? ` in ${formatSeconds((performance.now() - this.startedAt) / 1000)}` : "";
-    setDot(this.marker, stats.failure ? "fail" : "pass");
-    this.counts.textContent = `${stats.failure ? `${stats.failure} of ${stats.total} failed` : `${stats.total} passed`}${aborted ? " (stopped)" : ""}${elapsed}`;
+    // A generation that ran out of time isn't a failure, but it isn't a clean pass either: something may be
+    // wrong, and a hook may have recorded it as another outcome. Count every generation that hit the limit,
+    // not just those still classified as timeouts.
+    const timedOut = Math.max(counters.timeouts ?? 0, stats.timeout);
+    const state = stats.failure ? "fail" : timedOut ? "warn" : "pass";
+    setDot(this.marker, state);
+    const headline = stats.failure
+      ? `${stats.failure} of ${stats.total} failed`
+      : timedOut
+        ? `${stats.total - timedOut} of ${stats.total} passed · ${timedOut} timed out`
+        : `${stats.total} passed`;
+    this.counts.textContent = `${headline}${aborted ? " (stopped)" : ""}${elapsed}`;
 
     this.body.append(h("p", {}, statsLine(stats)));
     const notes = [];

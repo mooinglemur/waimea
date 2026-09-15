@@ -248,7 +248,7 @@ button.primary:hover { filter: brightness(1.08); }
 }
 
 /* A second signal beside the words, never the only one (aria-hidden in the markup): a dot that is green
-   for pass, red for fail, and a spinner while running. */
+   for pass, yellow for a warning, red for fail, and a spinner while running. */
 .state {
   display: inline-block;
   flex-shrink: 0;
@@ -261,6 +261,7 @@ button.primary:hover { filter: brightness(1.08); }
 }
 
 .state.pass { background: var(--pass); }
+.state.warn { background: var(--warn-fg); }
 .state.fail { background: var(--fail); }
 
 .state.running {

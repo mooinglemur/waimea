@@ -15,7 +15,10 @@ const outDir = resolve(outDirArg);
 const downloads = join(outDir, "downloads");
 mkdirSync(downloads, { recursive: true });
 const executablePath = browserName === "firefox" ? "/usr/bin/firefox-bin" : "/usr/bin/google-chrome-stable";
-const wanted = Object.fromEntries(variantsArg.split(",").filter(Boolean).map((p) => p.split("=")).map(([k, v]) => [k, Number(v)]));
+const requested = Object.fromEntries(variantsArg.split(",").filter(Boolean).map((p) => p.split("=")).map(([k, v]) => [k, Number(v)]));
+// `unit=0` turns the unit tests off, for worlds whose generation is too slow to test (fixtures/waimea_slow).
+const { unit, ...wanted } = requested;
+const unitTests = unit !== 0;
 const started = Date.now();
 const seconds = () => ((Date.now() - started) / 1000).toFixed(1);
 
@@ -52,7 +55,9 @@ try {
   await page.evaluate(() => [...document.querySelectorAll(".segmented button")].find((b) => b.textContent === "Quick").click());
   const presetRuns = await page.evaluate(() => [...document.querySelectorAll(".variants tbody tr")].map((tr) => tr.querySelector('input[type="number"]').value));
   console.log(`[${seconds()}s] Quick preset run counts: ${presetRuns.join(",")}`);
-  await page.evaluate((wanted, jobs) => {
+  await page.evaluate((wanted, jobs, unitTests) => {
+    const unitBox = document.querySelector("#options label.check input");
+    if (unitBox.checked !== unitTests) unitBox.click();
     for (const tr of document.querySelectorAll(".variants tbody tr")) {
       const name = tr.querySelector(".variant-name").textContent;
       const box = tr.querySelector('input[type="checkbox"]');
@@ -67,7 +72,7 @@ try {
     const workers = document.querySelector(".option-row input");
     workers.value = jobs;
     workers.dispatchEvent(new Event("change", { bubbles: true }));
-  }, wanted, Number(jobs));
+  }, wanted, Number(jobs), unitTests);
   await page.click('#options button[type="submit"]');
   await page.waitForFunction(() => !document.getElementById("run").hidden, { timeout: 30_000 });
 

@@ -96,7 +96,8 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    rounding down, which costs half the CPU and the same memory. Both labels name the pair count, and the
    halved choice is disabled with one worker, where it would be the same thing.
 3. **Start** runs the unit tests, then each fuzz variant in turn. Each section shows:
-   - a colored dot, green or red, or a spinner while running;
+   - a colored dot: green, yellow when generations only timed out, red for failures, or a spinner while
+     running. A timeout isn't a failure, but it isn't a clean pass either, so it warns instead;
    - passed/total or failed/total.
 
    A completed section can be expanded while later ones run:

@@ -19,6 +19,9 @@ Arguments are the browser, the server port, the apworld, the variants with run c
 screenshots and downloads, and an optional worker count (default 2). It prints what the page showed at
 each step and lists any page errors or console warnings.
 
+`unit=0` among the variants clears the unit-tests checkbox, for worlds whose generation is too slow to test
+(`spikes/04-browser-fuzz/fixtures/waimea_slow`).
+
 ## Results
 
 Run on 2026-09-15 with Librarian 2.0.3 on 2 workers: `default` × 6, `check-collect-accessibility` × 4
@@ -36,6 +39,10 @@ and `check-ut` × 6.
 | Whole session | 1 min 6 s | 52 s |
 | Save report | an 84 KB zip | an 83 KB zip |
 | Page errors or console warnings | none | none |
+
+Also run on 2026-09-15 with `fixtures/waimea_slow` (`unit=0,default=2`, 2 workers) in Chrome: both
+generations reached the 26-second timeout, and the variant and the status line ended yellow, reading
+"default 0 of 2 passed · 2 timed out" and "0 of 1 fuzz variants had failures; 1 timed out without failing".
 
 Screenshots in both themes were checked by eye:
 - the options form, and the live view with the failing test's group and subtests open;

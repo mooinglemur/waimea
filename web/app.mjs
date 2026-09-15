@@ -364,15 +364,23 @@ function finishRun() {
   const ran = record.fuzz.filter((entry) => entry.result);
   const withFailures = ran.filter((entry) => entry.result.report.stats.failure > 0);
   const broken = record.fuzz.filter((entry) => entry.error);
+  // Timeouts aren't failures, but a variant that only timed out isn't a clean pass either.
+  const timedOut = ran.filter((entry) => {
+    const { report, counters } = entry.result;
+    return report.stats.failure === 0 && Math.max(counters.timeouts ?? 0, report.stats.timeout) > 0;
+  });
+  let warned = false;
   if (ran.length || broken.length) {
     failed ||= withFailures.length > 0 || broken.length > 0;
+    warned ||= timedOut.length > 0;
     parts.push(`${withFailures.length} of ${ran.length + broken.length} fuzz variants had failures${broken.length ? ` (${broken.length} couldn't run)` : ""}`);
+    if (timedOut.length) parts.push(`${timedOut.length} timed out without failing`);
   }
   const elapsed = formatSeconds((new Date(record.finishedAt) - new Date(record.startedAt)) / 1000);
   const summary = parts.length ? `${parts[0][0].toUpperCase()}${parts.join("; ").slice(1)}.` : "Nothing was selected to run.";
   $("summary-text").textContent = `${record.aborted ? "Stopped early. " : ""}${summary} Took ${elapsed}.`;
   $("summary").hidden = false;
-  setStatus(record.aborted ? "" : failed ? "fail" : "pass", record.aborted ? `Stopped testing ${state.file.name}.` : `Finished testing ${state.file.name}.`);
+  setStatus(record.aborted ? "" : failed ? "fail" : warned ? "warn" : "pass", record.aborted ? `Stopped testing ${state.file.name}.` : `Finished testing ${state.file.name}.`);
 }
 
 async function onSave() {

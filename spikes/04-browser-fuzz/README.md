@@ -90,6 +90,10 @@ static files.
   strings, so generation depends on string hash randomization. `check-determinism` fails it in every
   runtime, since its paired interpreter hashes differently. It isn't a real game, and fails
   `test_implemented`'s completion-condition test.
+- `fixtures/waimea_slow/`: a minimal world whose `generate_early` busy-loops for 10 minutes, so every
+  generation reaches the fuzz timeout. It exercises timeout handling end to end, and the page's yellow
+  warning state for a variant that timed out without failing. Run it with unit tests off: the test battery
+  generates too, and would spin for the same 10 minutes per test.
 - `csp-probe.mjs <chrome|firefox> <server port> <waimea_netprobe.apworld>`: runs that fixture once
   against a running `server/main.mjs`, with a listener on 127.0.0.1:8236 as the cross-origin target.
   - Node's worker threads don't overflow at this depth either; they raise `RecursionError` as Firefox

@@ -350,8 +350,9 @@ button.primary:hover { filter: brightness(1.08); }
 .variants .variant-name { font-family: var(--mono); font-size: 0.92rem; }
 .variants .hint { font-size: 0.85rem; }
 .variants tr.unsupported .variant-name { color: var(--muted); }
-.variants .variant-option { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.25rem; font-size: 0.85rem; }
-.variants .variant-option:has(input:disabled) { color: var(--muted); }
+.variants .variant-option { display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.35rem; font-size: 0.85rem; color: var(--muted); }
+.variants .variant-option label { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text); }
+.variants .variant-option label:has(input:disabled) { color: var(--muted); }
 
 .option-row {
   display: flex;

@@ -147,17 +147,43 @@ function renderOptions() {
     }, preset.label),
   );
 
-  // A paired variant (check-determinism) runs two interpreters per worker; this can halve its workers.
-  const halveBox = h("input", { type: "checkbox", onchange: (e) => { plan.halvePairedJobs = e.target.checked; syncHalve(); } });
-  const halveHint = h("span", { class: "hint" });
-  const syncHalve = () => {
+  // A paired variant (check-determinism) runs two interpreters per worker, so it can use the worker count as
+  // pairs, at twice the memory, or halve it. Only one pair is possible with one worker.
+  const pairsLabel = (count) => `${count} worker ${count === 1 ? "pair" : "pairs"}`;
+  const fullPairs = h("input", { type: "radio", name: "paired-jobs", onchange: () => { plan.halvePairedJobs = false; syncPaired(); } });
+  const halfPairs = h("input", { type: "radio", name: "paired-jobs", onchange: () => { plan.halvePairedJobs = true; syncPaired(); } });
+  const fullPairsText = h("span", {});
+  const halfPairsText = h("span", {});
+  const syncPaired = () => {
     if (plan.jobs < 2) plan.halvePairedJobs = false;
-    halveBox.disabled = plan.jobs < 2;
-    halveBox.checked = plan.halvePairedJobs;
-    const pairs = pairedJobs(plan);
-    halveHint.textContent = `(${pairs} worker ${pairs === 1 ? "pair" : "pairs"}, ${2 * pairs} interpreters)`;
+    halfPairs.disabled = plan.jobs < 2;
+    fullPairs.checked = !plan.halvePairedJobs;
+    halfPairs.checked = plan.halvePairedJobs;
+    fullPairsText.textContent = `${pairsLabel(plan.jobs)}, uses the same amount of CPU and twice the RAM`;
+    halfPairsText.textContent = `${pairsLabel(pairedJobs({ jobs: plan.jobs, halvePairedJobs: true }))}, uses half the CPU, and the same amount of RAM`;
   };
-  syncHalve();
+  syncPaired();
+
+  // Header checkbox: on when every selectable variant is on, indeterminate when only some are.
+  const selectable = VARIANTS.filter((v) => !v.unsupported);
+  const enableInputs = new Map();
+  const selectAll = h("input", {
+    type: "checkbox",
+    "aria-label": "Run every variant",
+    onchange: (e) => {
+      for (const variant of selectable) {
+        const entry = plan.variants.find((v) => v.name === variant.name);
+        entry.enabled = e.target.checked;
+        enableInputs.get(variant.name).checked = entry.enabled;
+      }
+      syncSelectAll();
+    },
+  });
+  const syncSelectAll = () => {
+    const on = selectable.filter((v) => plan.variants.find((e) => e.name === v.name).enabled).length;
+    selectAll.checked = on === selectable.length;
+    selectAll.indeterminate = on > 0 && on < selectable.length;
+  };
 
   const runInputs = new Map();
   const rows = VARIANTS.map((variant) => {
@@ -167,8 +193,12 @@ function renderOptions() {
       checked: entry.enabled,
       disabled: Boolean(variant.unsupported),
       "aria-label": `Run ${variant.name}`,
-      onchange: (e) => (entry.enabled = e.target.checked),
+      onchange: (e) => {
+        entry.enabled = e.target.checked;
+        syncSelectAll();
+      },
     });
+    enableInputs.set(variant.name, enabled);
     const runs = h("input", {
       type: "number",
       min: 1,
@@ -191,10 +221,16 @@ function renderOptions() {
       h("td", {},
         h("div", { class: "variant-name" }, variant.name),
         h("div", { class: "hint" }, variant.unsupported ?? variant.description),
-        variant.paired ? h("label", { class: "variant-option" }, halveBox, "Use half the workers", halveHint) : null),
+        variant.paired
+          ? h("div", { class: "variant-option", role: "radiogroup", "aria-label": "Workers for check-determinism" },
+              h("div", {}, `${variant.name} requires a pair of workers for each run`),
+              h("label", {}, fullPairs, fullPairsText),
+              h("label", {}, halfPairs, halfPairsText))
+          : null),
       h("td", { class: "runs-cell" }, runs),
     );
   });
+  syncSelectAll();
 
   form.replaceChildren();
   // append() skips the game picker when there's only one game.
@@ -206,9 +242,9 @@ function renderOptions() {
     h("p", { class: "hint" },
       `CI runs 5000 generations for the first two variants and 500 for the rest. Many apworlds finish those in minutes; heavy ones can take hours in a browser, which Quick is for. `,
       `Generations time out after CI's ${CI_TIMEOUT_SECONDS} seconds, scaled by how fast this browser is compared with CI's runner, measured before fuzzing starts.`),
-    h("table", { class: "variants" }, h("thead", {}, h("tr", {}, h("th", {}, h("span", { class: "visually-hidden" }, "Run")), h("th", {}, "Variant"), h("th", { class: "runs-cell" }, "Runs"))), h("tbody", {}, rows)),
+    h("table", { class: "variants" }, h("thead", {}, h("tr", {}, h("th", {}, selectAll), h("th", {}, "Variant"), h("th", { class: "runs-cell" }, "Runs"))), h("tbody", {}, rows)),
     h("div", { class: "option-row" },
-      h("label", {}, "Workers ", h("input", { type: "number", min: 1, max: cores, value: plan.jobs, onchange: (e) => { plan.jobs = Math.min(cores, Math.max(1, Math.floor(Number(e.target.value) || 1))); syncHalve(); } })),
+      h("label", {}, "Workers ", h("input", { type: "number", min: 1, max: cores, value: plan.jobs, onchange: (e) => { plan.jobs = Math.min(cores, Math.max(1, Math.floor(Number(e.target.value) || 1))); syncPaired(); } })),
       h("span", { class: "hint" }, `Each worker is a Python interpreter using a few hundred MB. This device reports ${cores} cores.`)),
     h("details", { class: "extra-files" },
       h("summary", {}, "Optional files"),

@@ -79,7 +79,8 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    will be built, so URL entry waits until an apworld host allows cross-origin downloads.
 2. The page lists the tests to run, each section with a checkbox:
    - the unit tests;
-   - each fuzz variant, with an editable run count, and a preset control that sets them all at once:
+   - each fuzz variant, with an editable run count, a checkbox at the top of the table that selects or clears
+     them all, and a preset control that sets every count at once:
      - **CI**, the default: 5000 runs for the full variants and 500 for the check variants, as in the index
        CI. Many apworlds fuzz within a couple of minutes there, so they finish here too.
      - **Quick**: a tenth of that, for heavy worlds, where CI's counts can take hours in a browser.
@@ -90,9 +91,10 @@ When the index has `fuzz-meta/<world>/` YAMLs, CI runs each variant once per met
    - optional file pickers for an expectation-annotations TOML and a fuzz-meta YAML. By default neither is
      used, so every test is expected to pass.
 
-   The determinism variant runs two interpreters per worker (see Hooks), so its row has a **Use half the
-   workers** checkbox, off by default. It halves the pair count, rounding down, for that variant only, and is
-   disabled and unchecked below two workers.
+   The determinism variant runs two interpreters per worker (see Hooks), so its row offers a choice of
+   worker pairs: the worker count, the default, which costs the same CPU and twice the memory; or half of it,
+   rounding down, which costs half the CPU and the same memory. Both labels name the pair count, and the
+   halved choice is disabled with one worker, where it would be the same thing.
 3. **Start** runs the unit tests, then each fuzz variant in turn. Each section shows:
    - a colored dot, green or red, or a spinner while running;
    - passed/total or failed/total.
@@ -341,7 +343,7 @@ What `ap_tests.py` itself does:
   orchestrator's timeout runs through the regeneration; a timeout replaces both workers of the pair. A
   partner's fatal error is answered as the child's `error` reply, which the hook reports as a failure. A pair
   is two interpreters but only one is busy at a time, so CPU use is as for other variants and memory about
-  doubles; the page's **Use half the workers** option trades speed for memory.
+  doubles; the page's worker-pair choice trades speed for memory.
 
   **Checked** (2026-09-15; Node runs in `spikes/03-fuzz/`, the page in `spikes/06-page/`):
   - `fixtures/waimea_nondeterministic` (`spikes/04-browser-fuzz/`), which builds its item pool from a set of

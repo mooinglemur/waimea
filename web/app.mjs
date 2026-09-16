@@ -11,6 +11,7 @@ import { createZip } from "./zip.mjs";
 const $ = (id) => document.getElementById(id);
 
 const state = {
+  siteName: document.title,
   manifest: null,
   core: null,
   file: null,
@@ -26,6 +27,11 @@ const state = {
 function setStatus(marker, text) {
   setDot($("state"), marker);
   $("message").textContent = text;
+}
+
+/** The tab says which apworld is loaded, so several of them open at once stay tellable apart. */
+function setTitle(module) {
+  document.title = module ? `${state.siteName}: ${module}` : state.siteName;
 }
 
 const spawner = (script) => ({ onMessage, onError }) => {
@@ -74,6 +80,7 @@ async function onFileChosen() {
   if (!file || state.running) return;
   state.file = file;
   state.info = null;
+  setTitle();
   $("options").hidden = true;
   $("world").hidden = true;
   $("inspect-error").hidden = true;
@@ -96,6 +103,7 @@ async function onFileChosen() {
       return;
     }
     state.info = info;
+    setTitle(info.module);
     renderWorld(info);
     renderOptions();
     setStatus("", `${file.name} is ready to test.`);
@@ -422,8 +430,9 @@ try {
   const { archipelago, pyodide, site } = state.manifest;
   // Set by the server's WAIMEA_SITE_NAME.
   if (site?.name) {
+    state.siteName = site.name;
     document.querySelector(".brand").textContent = site.name;
-    document.title = site.name;
+    setTitle();
   }
   // Each name links to its source. They open in a new tab: a click during a run would otherwise leave the
   // page and lose the results.

@@ -83,6 +83,7 @@ Security headers:
 |---|---|---|
 | `WAIMEA_PORT` / `WAIMEA_HOST` | `8080` / `::` | Listen address. A non-integer port, such as the `tcp://...` value Kubernetes injects for a Service named `waimea`, is ignored with a warning. |
 | `WAIMEA_SITE_NAME` | `Waimea` | The name at the top left of the page and in the browser tab. The page sets it from `/manifest.json` once that loads. |
+| `WAIMEA_COMMIT` | unset | The commit the image was built from, shown in the footer as `<version>-<short hash>`. The image build sets it from its `WAIMEA_COMMIT` build argument; without it the footer shows the version number alone. |
 | `WAIMEA_VENDOR_DIR` | `vendor/` | Pinned inputs; the server reads `inputs.json` and `pyodide/`. |
 | `WAIMEA_CORE_BUNDLE` | `build/out/core.zip` | The core bundle. |
 | `WAIMEA_CALIBRATION` | `deploy/calibration.json` | The fuzz timeout calibration reference. |

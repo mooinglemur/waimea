@@ -7,6 +7,7 @@ import { after, before, test } from "node:test";
 import { brotliDecompressSync } from "node:zlib";
 import { createHandler, PAGE_POLICY, WORKER_POLICY } from "../server/http.mjs";
 import { loadRuntime } from "../server/runtime.mjs";
+import { VERSION } from "../server/version.mjs";
 
 const inputs = {
   archipelago: { version: "0.6.7", repository: "ionium-ap/Archipelago", commit: "f".repeat(40) },
@@ -96,6 +97,18 @@ test("the manifest points at the content-hashed core bundle, which is immutable"
   assert.equal(core.headers["cache-control"], "public, max-age=31536000, immutable");
   assert.equal(core.body.toString(), "not really a zip");
   assert.equal((await get(port, `/bundles/core-${"0".repeat(64)}.zip`)).status, 404);
+});
+
+test("the manifest carries Waimea's version, with the commit the image was built from", async () => {
+  const stamped = await loadRuntime({
+    coreBundle: join(root, "build", "core.zip"),
+    calibrationFile: join(root, "calibration.json"),
+    inputs,
+    version: "0.1.0-abc1234",
+  });
+  assert.equal(JSON.parse(stamped.manifest).version, "0.1.0-abc1234");
+  const { port } = await serve();
+  assert.equal(JSON.parse((await get(port, "/manifest.json")).body).version, VERSION);
 });
 
 test("the manifest carries the configured site name, or Waimea by default", async () => {

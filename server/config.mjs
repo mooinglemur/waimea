@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { log } from "./log.mjs";
 import { portSetting } from "./settings.mjs";
+import { versionString } from "./version.mjs";
 
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const env = process.env;
@@ -19,6 +20,8 @@ export const config = {
   calibrationFile: resolve(env.WAIMEA_CALIBRATION ?? join(appDir, "deploy", "calibration.json")),
   // Shown at the top left of the page and in the browser tab.
   siteName: env.WAIMEA_SITE_NAME?.trim() || "Waimea",
+  // Shown in the page footer. The commit comes from the image build; a local run shows the number alone.
+  version: versionString(env.WAIMEA_COMMIT),
   host: env.WAIMEA_HOST ?? "::",
   port: portSetting(env, "WAIMEA_PORT", 8080, log),
   inputs: JSON.parse(readFileSync(join(vendorDir, "inputs.json"), "utf8")),

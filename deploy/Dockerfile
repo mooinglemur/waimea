@@ -22,6 +22,9 @@ COPY --from=core /out/core.zip /out/core.json /app/build/out/
 COPY server /app/server
 COPY web /app/web
 COPY deploy/calibration.json /app/deploy/calibration.json
+# The commit this image was built from, shown in the page footer after the version number.
+ARG WAIMEA_COMMIT=""
+ENV WAIMEA_COMMIT=$WAIMEA_COMMIT
 ENV WAIMEA_PORT=8080
 USER node
 EXPOSE 8080

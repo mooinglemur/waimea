@@ -425,7 +425,8 @@ try {
     document.querySelector(".brand").textContent = site.name;
     document.title = site.name;
   }
-  $("version").textContent = `waimea · Archipelago ${archipelago.version} (${archipelago.repository}@${archipelago.commit.slice(0, 7)}) · Pyodide ${pyodide.version}`;
+  const waimea = state.manifest.version ? `waimea ${state.manifest.version}` : "waimea";
+  $("version").textContent = `${waimea} · Archipelago ${archipelago.version} (${archipelago.repository}@${archipelago.commit.slice(0, 7)}) · Pyodide ${pyodide.version}`;
   $("apworld").disabled = false;
   setStatus("", "Choose an apworld file to see the tests that will run.");
 } catch (err) {

@@ -425,8 +425,19 @@ try {
     document.querySelector(".brand").textContent = site.name;
     document.title = site.name;
   }
-  const waimea = state.manifest.version ? `waimea ${state.manifest.version}` : "waimea";
-  $("version").textContent = `${waimea} · Archipelago ${archipelago.version} (${archipelago.repository}@${archipelago.commit.slice(0, 7)}) · Pyodide ${pyodide.version}`;
+  // Each name links to its source. They open in a new tab: a click during a run would otherwise leave the
+  // page and lose the results.
+  const source = (href, text) => h("a", { href, target: "_blank", rel: "noopener" }, text);
+  $("version").replaceChildren();
+  append($("version"), [
+    source("https://github.com/mooinglemur/waimea", "waimea"),
+    state.manifest.version ? ` ${state.manifest.version}` : null,
+    " · ",
+    source("https://github.com/ionium-ap/Archipelago", "Archipelago"),
+    ` ${archipelago.version} (${archipelago.repository}@${archipelago.commit.slice(0, 7)}) · `,
+    source("https://github.com/pyodide/pyodide", "Pyodide"),
+    ` ${pyodide.version}`,
+  ]);
   $("apworld").disabled = false;
   setStatus("", "Choose an apworld file to see the tests that will run.");
 } catch (err) {

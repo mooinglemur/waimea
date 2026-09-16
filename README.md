@@ -10,12 +10,16 @@ can't be trusted by anyone else.
 
 ## Status
 
-Planning. The feasibility spike is done, and nothing else is built yet.
+Version 0.1.0, feature-complete. An apworld's unit tests and all eleven of the index CI's fuzz variants run
+in the browser, including `check-determinism`, which regenerates each seed in a second interpreter. Results
+match native `fuzz.py` and the CI's own aggregators read the saved report.
+
+Waimea mirrors the index CI's `unit-tests` and `fuzz` jobs. The CI's network audit has no counterpart here,
+because worker code has no network at all; `docs/design.md` covers that and the rest of the design.
+
+## Layout
 
 - `docs/design.md`: the plan, constraints and decisions.
-- `docs/spike-01-feasibility.md`: speed, memory, stack depth and hash randomization, measured under Pyodide
-  in Node, Chrome and Firefox.
-- `spikes/01-feasibility/`: the spike's scripts and raw results.
 - `deploy/inputs.json`: pinned inputs, matching the index CI's image:
   - the `ionium-ap/Archipelago` fork and `ionium-ap/Archipelago-fuzzer` commits, and the fuzzer hooks CI
     replaces;
@@ -33,7 +37,7 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `apworld_info.py` describes an uploaded apworld (module, manifest, games);
   - the rest are stand-ins for modules Pyodide lacks (some adapted from Kalapana).
 - `web/`: the page and its modules.
-  - `index.html`, `app.mjs` and `app.css` are the page.
+  - `index.html`, `app.mjs`, `app.css` and `theme.js` are the page.
   - `unit-view.mjs` and `fuzz-view.mjs` render its result sections, and `dom.mjs` builds elements (always
     as text: test names, tracebacks and logs come from apworld code).
   - `session.mjs` runs a whole session (inspection, unit tests, calibration, fuzz variants) as a stream of
@@ -44,6 +48,9 @@ Planning. The feasibility spike is done, and nothing else is built yet.
   - `fuzz-variants.mjs` is CI's variant table.
   - `report.mjs` and `zip.mjs` build the downloadable report.
 - `build/`: builds `core.zip`, the Archipelago runtime each worker unpacks, in CI's image layout.
+- `server/`: the Node server, including `version.mjs`, which holds Waimea's version number.
+- `test/`: `node --test` suites for the server, the fuzz orchestrator, the session plan, the report and the
+  zip. They need no browser and no core bundle.
 - `web/calibration.mjs`, `calibration/` and `deploy/calibration.json`: fuzz timeout calibration.
   - The browser times a fixed workload against a reference measured natively by
     `calibration/measure_native.py`, and scales CI's 30-second timeout by the difference.
@@ -57,7 +64,8 @@ node deploy/fetch-inputs.mjs vendor        # pinned inputs into vendor/; needs t
 node build/build-core.mjs vendor build/out  # core.zip, the runtime each worker unpacks
 node server/main.mjs                        # http://localhost:8080
 node --test 'test/*.test.mjs'
-docker build -f deploy/Dockerfile -t waimea .
+# --build-arg WAIMEA_COMMIT stamps the footer's version; CI passes the pipeline's commit.
+docker build -f deploy/Dockerfile --build-arg WAIMEA_COMMIT="$(git rev-parse --short HEAD)" -t waimea .
 ```
 
 ## Server
@@ -67,7 +75,7 @@ docker build -f deploy/Dockerfile -t waimea .
 | Route | Notes |
 |---|---|
 | `/` and `web/` | The page. `no-cache` with ETags. |
-| `/manifest.json` | Pinned versions, the Pyodide and core bundle URLs, and the timeout calibration. |
+| `/manifest.json` | Waimea's version and site name, the pinned versions, the Pyodide and core bundle URLs, and the timeout calibration. |
 | `/runtime/pyodide-<version>/*` | The Pyodide runtime. Immutable. |
 | `/bundles/core-<sha256>.zip` | The core bundle, named by content. Immutable. |
 | `/healthz` | Liveness. |

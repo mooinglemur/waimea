@@ -104,9 +104,9 @@ test("the manifest carries Waimea's version, with the commit the image was built
     coreBundle: join(root, "build", "core.zip"),
     calibrationFile: join(root, "calibration.json"),
     inputs,
-    version: "0.1.0-abc1234",
+    version: "0.1.0+abc1234",
   });
-  assert.equal(JSON.parse(stamped.manifest).version, "0.1.0-abc1234");
+  assert.equal(JSON.parse(stamped.manifest).version, "0.1.0+abc1234");
   const { port } = await serve();
   assert.equal(JSON.parse((await get(port, "/manifest.json")).body).version, VERSION);
 });

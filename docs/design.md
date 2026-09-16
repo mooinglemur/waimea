@@ -161,7 +161,7 @@ The `unittest-report` and `fuzz-report` trees are what the CI's `aggregate_unitt
 - **CI.** GitLab CI runs `node --test` and syntax checks, then builds with buildah. There is no deploy job.
 - **Version.** The number lives in `server/version.mjs`, and the image build stamps the commit it was built
   from through the `WAIMEA_COMMIT` build argument, which the pipeline fills from `CI_COMMIT_SHORT_SHA`. The
-  manifest carries the result and the page shows it in the footer, as `0.1.0-abc1234`. A local run, with no
+  manifest carries the result and the page shows it in the footer, as `0.1.0+abc1234`. A local run, with no
   commit to stamp, shows `0.1.0`.
 - **Headers.**
   - The page's policy allows scripts only from Waimea and denies other connections.
